@@ -1,0 +1,41 @@
+Zutomayo Card Game — SFX Credits
+================================
+
+All source sounds were downloaded from Freesound.org. Each clip below was
+processed through a cassette character chain (highpass 80Hz, lowpass 8kHz,
+soft compression, 4Hz vibrato) to give it a worn analog quality.
+
+----------------------------------------------------------------
+Processed file        Source URL                                                              License   Author
+----------------------------------------------------------------
+card-flip.mp3         https://freesound.org/people/Splashdust/sounds/84322/                   CC0       Splashdust
+card-set.mp3          https://freesound.org/people/f4ngy/sounds/240776/                       CC-BY 4.0 f4ngy
+impact.mp3            https://freesound.org/people/Breviceps/sounds/449955/                   CC0       Breviceps
+clock-tick.mp3        https://freesound.org/people/modusmogulus/sounds/790486/                CC0       modusmogulus
+damage-tick.mp3       https://freesound.org/people/modusmogulus/sounds/790486/  (pitched)     CC0       modusmogulus
+ui-click.mp3          https://freesound.org/s/351567/                                         CC-BY 4.0 (see source page)
+sting-start.mp3       https://freesound.org/people/Erokia/sounds/387588/                      CC0       Erokia
+sting-end.mp3         https://freesound.org/people/Erokia/sounds/387588/  (pitched -3 st)     CC0       Erokia
+
+Attribution requirements
+------------------------
+CC-BY 4.0 clips require attribution. The following credits MUST appear in the
+game's credits screen or accompanying documentation:
+
+  - "Card slap" by f4ngy (https://freesound.org/people/f4ngy/sounds/240776/)
+    licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+  - Sound #351567 from Freesound (https://freesound.org/s/351567/)
+    licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+
+CC0 clips have no attribution requirement, but credit is given above as a
+courtesy to the original authors.
+
+Processing chain (ffmpeg)
+-------------------------
+  highpass=f=80, lowpass=f=8000,
+  acompressor=threshold=-15dB:ratio=4:attack=10:release=200,
+  vibrato=f=4:d=0.02
+
+Pitched variants additionally use:
+  asetrate=44100*0.84, aresample=44100 (-3 semitones, slower)
+  + atempo=1.19 to restore original duration where noted (damage-tick)

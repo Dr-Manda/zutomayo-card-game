@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+:root {
+  /* Paper + ink core palette */
+  --color-paper:         #f1ece2;
+  --color-paper-deep:    #e7e0d0;
+  --color-ink-primary:   #1a1a1a;
+  --color-ink-secondary: #535353;
+  /* WCAG: dim ink #868686 on paper #f1ece2 is 3.09:1 — fails on the 9–12px
+     mono labels that use it almost exclusively. Darkened to #616161 (5.26:1). */
+  --color-ink-dim:       #616161;
+
+  /* Two-ink riso spot colors (display use — large headings, halftones, clock) */
+  --color-accent:        #F15060;  /* riso fluorescent pink */
+  --color-night:         #00AEEF;  /* riso teal — Chronos night */
+  --color-day:           #F15060;  /* riso pink — Chronos day, reuses accent */
+  --color-danger:        #B91333;  /* deeper crimson, damage / game over */
+
+  /* WCAG-passing deep variants for UI surfaces that carry text. The fluorescent
+     originals are reserved for large display graphics; deep variants are used
+     anywhere paper-on-fill or fill-on-paper text needs to clear 4.5:1.
+     Ratios recomputed against paper #f1ece2 — first pass at #007CAD only hit
+     ~4.0:1, so night-deep was darkened to clear AA. */
+  --color-accent-deep:   #C2303F;  /* paper-on-accent-deep ~4.70:1 */
+  --color-night-deep:    #00689A;  /* paper-on-night-deep  ~5.19:1 */
+
+  /* Overprint colors (derived from pink × teal multiply) */
+  --color-overprint:     #0a3e74;
+  --color-overprint-dim: rgba(10, 62, 116, 0.4);
+
+  /* Semantic surfaces */
+  --color-card-bg:       #ffffff;
+  --color-stamp:         #1a1a1a;
+  --color-stamp-ink:     #f1ece2;
+
+  /* Spacing scale */
+  --space-hair: 1px;
+  --space-2xs: 4px;
+  --space-xs:  8px;
+  --space-sm:  12px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Border idioms */
+  --border-ink:      1px solid var(--color-ink-primary);
+  --border-ink-2:    2px solid var(--color-ink-primary);
+  --border-hairline: 1px solid var(--color-ink-secondary);
+
+  /* Font variables — these get populated by next/font in layout.tsx */
+  --font-display:   var(--font-yusei-magic, 'Space Grotesk', system-ui, sans-serif);
+  --font-body:      var(--font-noto-sans-jp, 'Yu Gothic', YuGothic, sans-serif);
+  --font-mono:      var(--font-jetbrains-mono, ui-monospace, monospace);
+  --font-numeric:   var(--font-barlow-condensed, 'JetBrains Mono', monospace);
+}
+
+@theme inline {
+  /* Map CSS vars to Tailwind utility classes */
+  --color-paper: var(--color-paper);
+  --color-paper-deep: var(--color-paper-deep);
+  --color-ink: var(--color-ink-primary);
+  --color-ink-secondary: var(--color-ink-secondary);
+  --color-ink-dim: var(--color-ink-dim);
+  --color-accent: var(--color-accent);
+  --color-accent-deep: var(--color-accent-deep);
+  --color-night: var(--color-night);
+  --color-night-deep: var(--color-night-deep);
+  --color-day: var(--color-day);
+  --color-danger: var(--color-danger);
+  --color-overprint: var(--color-overprint);
+  --color-card-bg: var(--color-card-bg);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+  --font-numeric: var(--font-numeric);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-paper);
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.10 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 220px 220px;
+  color: var(--color-ink-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  min-height: 100svh;
+}
+
+/* Utility classes — zine/riso treatments */
+
+.ink-offset {
+  color: var(--color-ink-primary);
+  text-shadow:
+    -1.5px -0.5px 0 var(--color-night),
+    1.5px 0.5px 0 var(--color-accent);
+}
+
+.ink-offset-tight {
+  color: var(--color-ink-primary);
+  text-shadow:
+    -0.75px 0 0 var(--color-night),
+    0.75px 0 0 var(--color-accent);
+}
+
+.halftone-pink {
+  background-image: radial-gradient(circle at center, var(--color-accent) 22%, transparent 24%);
+  background-size: 8px 8px;
+}
+
+.halftone-teal {
+  background-image: radial-gradient(circle at center, var(--color-night) 22%, transparent 24%);
+  background-size: 8px 8px;
+}
+
+.halftone-pink-coarse { background-image: radial-gradient(circle at center, var(--color-accent) 22%, transparent 24%); background-size: 14px 14px; }
+.halftone-teal-coarse { background-image: radial-gradient(circle at center, var(--color-night) 22%, transparent 24%); background-size: 14px 14px; }
+
+.border-offset {
+  position: relative;
+  border: var(--border-ink-2);
+}
+.border-offset::before {
+  content: '';
+  position: absolute;
+  inset: -2px 0 0 -2px;
+  border-top: 2px solid var(--color-night);
+  border-left: 2px solid var(--color-night);
+  pointer-events: none;
+}
+
+/* Card isolation — texture stops at card edge */
+.card-isolate {
+  isolation: isolate;
+  background: var(--color-card-bg);
+}
+
+/* Hairline list separator (zutomayo.net news pattern) */
+.hairline-list > * + * {
+  border-top: 1px solid var(--color-ink-secondary);
+}
+
+/* Hard-edge button reset for stamp badges */
+.stamp-reset {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes shakeHit { 0%, 100% { transform: translateX(0) } 25% { transform: translateX(-4px) } 75% { transform: translateX(4px) } }
+
+.animate-fade-in { animation: fadeIn 300ms ease-out }
+.animate-slide-up { animation: slideUp 280ms cubic-bezier(0.22, 0.61, 0.36, 1) }
+.animate-shake { animation: shakeHit 350ms ease-out }

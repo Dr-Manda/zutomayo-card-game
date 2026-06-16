@@ -1,0 +1,22 @@
+{
+  "name": "ZUTOMAYO CARD — THE BATTLE BEGINS",
+  "short_name": "ずとまよカード",
+  "description": "Unofficial fanmade Zutomayo Card Game",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1ece2",
+  "theme_color": "#f1ece2",
+  "icons": [
+    {
+      "src": "./manifest-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./manifest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
