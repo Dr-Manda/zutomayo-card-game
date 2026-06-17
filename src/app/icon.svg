@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Riso-style ず mark. Paper background, hard ink border,
+       fluorescent pink + teal misregistration matching the
+       .ink-offset utility used across the UI. -->
+  <rect width="64" height="64" fill="#f1ece2"/>
+  <rect x="2" y="2" width="60" height="60" fill="none" stroke="#1a1a1a" stroke-width="3"/>
+  <!-- Teal layer (offset up-left) -->
+  <text x="32" y="48" text-anchor="middle"
+        font-family="'Yusei Magic', 'Yu Gothic', YuGothic, sans-serif"
+        font-size="44" font-weight="400" fill="#00AEEF">ず</text>
+  <!-- Pink layer (offset down-right) -->
+  <text x="34" y="50" text-anchor="middle"
+        font-family="'Yusei Magic', 'Yu Gothic', YuGothic, sans-serif"
+        font-size="44" font-weight="400" fill="#F15060">ず</text>
+  <!-- Ink layer (registered) -->
+  <text x="33" y="49" text-anchor="middle"
+        font-family="'Yusei Magic', 'Yu Gothic', YuGothic, sans-serif"
+        font-size="44" font-weight="400" fill="#1a1a1a">ず</text>
+</svg>

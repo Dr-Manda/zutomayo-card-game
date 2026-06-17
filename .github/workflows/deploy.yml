@@ -1,0 +1,50 @@
+name: Deploy to GitHub Pages
+
+# Wave 3.1 — IMPROVEMENTS.md. Static-export -> upload-pages-artifact -> deploy.
+# The repo MUST be named exactly `zutomayo-card-game` because next.config.ts
+# hardcodes that as basePath in production; any other name 404s every asset.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Cancel an in-flight Pages deploy when a newer commit lands so we don't
+# burn minutes on a build whose output is about to be superseded.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # Belt-and-braces: the artifact upload path skips Jekyll, but adding
+      # .nojekyll keeps a future switch to branch-based deploy from silently
+      # dropping the _next/ chunk directory.
+      - run: touch out/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

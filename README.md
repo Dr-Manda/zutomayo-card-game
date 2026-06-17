@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ずとまよ Card Game
 
-## Getting Started
+> 非公式ファンメイド · Unofficial fanmade · not affiliated with EARN-A-ROCK / ZUTOMAYO.
 
-First, run the development server:
+A two-player hot-seat web implementation of the ZUTOMAYO Card Game, presented
+in a riso-print / zine aesthetic. Built with Next.js 15 and statically exported
+for GitHub Pages.
+
+## Stack
+
+- Next.js 15 (App Router, `output: 'export'`)
+- React 19
+- Tailwind v4 (no PostCSS plugins — `@theme inline` tokens)
+- TypeScript 5
+- Motion (Framer Motion successor) + Howler (lazy-loaded)
+- No backend, no database — fully static.
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # localhost:3000
+npm run lint
+npm run build        # produces ./out/
+npx tsc --noEmit
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The development server runs without basePath; the production build prefixes
+every asset with `/zutomayo-card-game/` to match the GitHub Pages URL.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Push to `main` and GitHub Actions runs `.github/workflows/deploy.yml`, which
+builds the static export and publishes it via the Pages deployment.
+The first push needs **Settings → Pages → Source: GitHub Actions** to be set
+manually.
 
-## Learn More
+The repo MUST be named exactly `zutomayo-card-game` — `next.config.ts`
+hardcodes that as the production `basePath`. Renaming requires editing
+`next.config.ts` and `src/lib/basePath.ts` in lockstep.
 
-To learn more about Next.js, take a look at the following resources:
+## Project layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/                  # Next.js routes
+│   ├── battle/            #   /battle — hot-seat match
+│   ├── gallery/           #   /gallery — card catalog
+│   ├── rules/             #   /rules — game rules
+│   ├── credits/           #   /credits — CC-BY attributions
+│   └── layout.tsx, page.tsx, globals.css
+├── components/           # Shared UI atoms + battle screens
+├── hooks/                #   useGame() — the dispatcher + state machine
+├── lib/                  # Engine, deck builder, sound, basePath, theme
+├── data/                 #   cards.json — 422-card catalog
+└── types/                #   GameState, Card, PlayerState, ...
+public/
+├── cards/                # ~150MB of card scans (NOT covered by repo license)
+├── mat/                  # Riso play-mat background images
+└── sfx/                  # Card-flip / clock-tick / impact / sting clips
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Backlog
 
-## Deploy on Vercel
+See [`IMPROVEMENTS.md`](./IMPROVEMENTS.md). It's organized into 4 waves
+(Correctness → Core experience → Ship it → Depth & hygiene); Waves 1 and 2
+ship in the initial commit, Wave 3 is the deploy plumbing, Wave 4 is the
+effects engine and test infra.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Licensing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Source code** (everything under `src/`, plus config files) is released
+  under the [MIT License](./LICENSE).
+- **Assets** under `public/cards/`, `public/mat/`, and `public/sfx/` are
+  NOT covered by the source license. The card and mat artwork belongs to
+  EARN-A-ROCK / ZUTOMAYO and is used here purely for fan-project purposes
+  with no claim of ownership. The SFX files have their own licenses
+  documented in `public/sfx/CREDITS.txt` (see also the in-app
+  `/credits` page).
+
+If you are an EARN-A-ROCK / ZUTOMAYO rightsholder and would like any
+specific asset removed, open an issue or email and it will be removed
+the same day.

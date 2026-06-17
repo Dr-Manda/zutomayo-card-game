@@ -1,8 +1,12 @@
 'use client'
 
-import { Howl, Howler } from 'howler'
+// Lazy-loaded inside SoundManager.init() so this module stays import-safe
+// for SSR/SSG. Howler touches `window` at module-load time — pulling it
+// in eagerly forced layout.tsx into ssr:false-via-dynamic, which exported
+// empty HTML shells with no crawlable content. See IMPROVEMENTS.md 3.3.
+import type { Howl as HowlType, Howler as HowlerType } from 'howler'
+import { BASE_PATH } from './basePath'
 
-const BASE_PATH = process.env.NODE_ENV === 'production' ? '/zutomayo-card-game' : ''
 const sfx = (file: string) => `${BASE_PATH}/sfx/processed/${file}`
 
 export type SfxId =
@@ -46,33 +50,47 @@ interface ISoundManager {
 }
 
 class SoundManager implements ISoundManager {
-  private sounds: Map<SfxId, Howl> = new Map()
+  private sounds: Map<SfxId, HowlType> = new Map()
   private unlocked = false
   private initialized = false
+  // Captured at the end of init() so play/unlock can `new Howl(...)` without
+  // re-importing. Pre-init calls to play() no-op (matching the previous
+  // top-level-import behavior, just without forcing ssr:false on the layout).
+  private HowlCtor: typeof HowlType | null = null
+  private HowlerNs: typeof HowlerType | null = null
 
   init(): void {
     if (this.initialized) return
     this.initialized = true
 
-    ;(Object.keys(SOUND_CONFIGS) as SfxId[]).forEach((id) => {
-      const cfg = SOUND_CONFIGS[id]
-      const shouldPreload = id !== 'sting-start' && id !== 'sting-end'
-      const howl = new Howl({
-        src: [cfg.src],
-        volume: cfg.volume,
-        preload: shouldPreload,
-        html5: false,
+    // Fire-and-forget — eager callers (e.g. SfxProvider's mount effect) get a
+    // no-op play() until the dynamic import resolves; this is identical to the
+    // user experience before, because no SFX fire before first interaction.
+    void import('howler').then(({ Howl, Howler }) => {
+      this.HowlCtor = Howl
+      this.HowlerNs = Howler
+
+      ;(Object.keys(SOUND_CONFIGS) as SfxId[]).forEach((id) => {
+        const cfg = SOUND_CONFIGS[id]
+        const shouldPreload = id !== 'sting-start' && id !== 'sting-end'
+        const howl = new Howl({
+          src: [cfg.src],
+          volume: cfg.volume,
+          preload: shouldPreload,
+          html5: false,
+        })
+        this.sounds.set(id, howl)
       })
-      this.sounds.set(id, howl)
     })
   }
 
   unlock(): void {
     if (this.unlocked) return
+    if (!this.HowlCtor || !this.HowlerNs) return // Howler module hasn't resolved yet
     this.unlocked = true
 
     try {
-      const ctx = Howler.ctx
+      const ctx = this.HowlerNs.ctx
       if (ctx && ctx.state === 'suspended' && typeof ctx.resume === 'function') {
         // Fire-and-forget; promise rejection is non-fatal.
         void ctx.resume()
@@ -82,7 +100,7 @@ class SoundManager implements ISoundManager {
     }
 
     try {
-      const silent = new Howl({
+      const silent = new this.HowlCtor({
         src: [SILENT_WAV_DATA_URI],
         volume: 0,
         preload: true,
@@ -96,6 +114,9 @@ class SoundManager implements ISoundManager {
 
   play(id: SfxId): void {
     if (!this.initialized) this.init()
+    // Howler module not yet resolved → drop this play. The user gets silence
+    // for the first ~10ms of the session, which they wouldn't notice anyway.
+    if (!this.HowlCtor) return
     if (!this.unlocked) this.unlock()
 
     const sound = this.sounds.get(id)
@@ -117,8 +138,9 @@ class SoundManager implements ISoundManager {
   }
 
   setMasterVolume(volume: number): void {
+    if (!this.HowlerNs) return
     try {
-      Howler.volume(volume)
+      this.HowlerNs.volume(volume)
     } catch {
       // No-op if Howler global isn't ready.
     }

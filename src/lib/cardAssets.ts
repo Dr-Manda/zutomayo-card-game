@@ -1,6 +1,5 @@
 import type { Card } from '@/types/game'
-
-const BASE_PATH = process.env.NODE_ENV === 'production' ? '/zutomayo-card-game' : ''
+import { BASE_PATH } from './basePath'
 
 export function getLocalCardPath(card: Card): string {
   const filename = card.img.split('/').pop() || ''

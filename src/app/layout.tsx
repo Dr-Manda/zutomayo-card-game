@@ -5,7 +5,9 @@ import {
   JetBrains_Mono,
   Barlow_Condensed,
 } from "next/font/google";
-import { SfxProviderClient } from "@/components/SfxProviderClient";
+import { SfxProvider } from "@/components/SfxProvider";
+import SoundToggle from "@/components/SoundToggle";
+import { BASE_PATH } from "@/lib/basePath";
 import "./globals.css";
 
 const yuseiMagic = Yusei_Magic({
@@ -37,10 +39,35 @@ const barlowCondensed = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "ZUTOMAYO CARD — THE BATTLE BEGINS",
+  // metadataBase is the URL the production site lives at. Once set, every
+  // relative URL in openGraph / twitter / etc. resolves against it — so
+  // shared links on Discord/Twitter/LINE render the real card metadata
+  // instead of bare text. The repo username is hardcoded since this is
+  // the only place it appears in the codebase.
+  metadataBase: new URL("https://dr-manda.github.io/zutomayo-card-game"),
+  title: {
+    default: "ZUTOMAYO CARD — THE BATTLE BEGINS",
+    template: "%s — ZUTOMAYO CARD",
+  },
   description:
     "ずとまよカードゲーム — 非公式ファンメイド / Unofficial fanmade Zutomayo Card Game",
-  manifest: "/manifest.json",
+  // Next does NOT apply basePath to metadata.manifest — verified empirically
+  // in the built HTML. Without manual prefixing the link tag emits
+  // href="/manifest.json", which 404s on Pages under /zutomayo-card-game.
+  manifest: `${BASE_PATH}/manifest.json`,
+  openGraph: {
+    title: "ZUTOMAYO CARD — THE BATTLE BEGINS",
+    description:
+      "ずとまよカードゲーム — 非公式ファンメイド / Unofficial fanmade Zutomayo Card Game",
+    locale: "ja_JP",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "ZUTOMAYO CARD — THE BATTLE BEGINS",
+    description:
+      "ずとまよカードゲーム — 非公式ファンメイド / Unofficial fanmade Zutomayo Card Game",
+  },
 };
 
 export const viewport: Viewport = {
@@ -61,7 +88,10 @@ export default function RootLayout({
       className={`${yuseiMagic.variable} ${notoSansJP.variable} ${jetBrainsMono.variable} ${barlowCondensed.variable}`}
     >
       <body className="antialiased">
-        <SfxProviderClient>{children}</SfxProviderClient>
+        <SfxProvider>
+          {children}
+          <SoundToggle />
+        </SfxProvider>
       </body>
     </html>
   );

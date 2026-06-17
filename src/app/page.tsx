@@ -88,6 +88,15 @@ export default function Home() {
                 href="/rules"
               />
             </div>
+            <div className="w-full [&>a]:w-full [&>a]:flex">
+              <StampBadge
+                size="lg"
+                variant="outline"
+                jp="クレジット"
+                en="CREDITS"
+                href="/credits"
+              />
+            </div>
           </nav>
         </section>
 
