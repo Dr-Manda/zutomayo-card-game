@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion } from 'motion/react'
 import type { Card } from '@/types/game'
 import CardView from '@/components/CardView'
@@ -40,10 +40,15 @@ export default function RevealScreen({
   onContinue,
 }: RevealScreenProps) {
   const { play } = useSfx()
+  // StrictMode dev double-mounts the effect. Latch so the flip cue
+  // only fires on the real mount.
+  const playedRef = useRef(false)
 
   // Single flip cue on mount — the two cards swing in at the same time so a
   // single sample stays in sync with the visual.
   useEffect(() => {
+    if (playedRef.current) return
+    playedRef.current = true
     play('card-flip')
   }, [play])
 

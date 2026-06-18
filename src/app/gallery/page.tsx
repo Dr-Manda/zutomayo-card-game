@@ -30,6 +30,12 @@ const RARITY_OPTIONS: Array<{ key: Rarity | 'ALL'; jp: string; en: string }> = [
   { key: 'SE', jp: 'SE', en: 'SPECIAL' },
 ]
 
+// sessionStorage keys — scoped to gallery so a future page can persist its own
+// filters independently. Cleared on tab close, not navigation, so a quick
+// return preserves the player's filter state without polluting localStorage.
+const STORAGE_KEY_PACK = 'zcg-gallery-pack'
+const STORAGE_KEY_RARITY = 'zcg-gallery-rarity'
+
 const EASE_OUT: [number, number, number, number] = [0.22, 0.61, 0.36, 1]
 
 // Crude kana → romaji is out of scope; we use the card's id-derived slug as a
@@ -46,17 +52,89 @@ export default function GalleryPage() {
   const [selectedRarity, setSelectedRarity] = useState<Rarity | 'ALL'>('ALL')
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [packOpen, setPackOpen] = useState(false)
+  const [query, setQuery] = useState<string>('')
 
   const packPickerRef = useRef<HTMLDivElement | null>(null)
 
+  // Restore persisted pack + rarity on mount. Hydrating in an effect rather
+  // than the useState initializer keeps the SSG-rendered HTML stable (the
+  // server has no sessionStorage), avoiding a hydration mismatch.
+  useEffect(() => {
+    try {
+      const storedPack = window.sessionStorage.getItem(STORAGE_KEY_PACK)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (storedPack) setSelectedPack(storedPack)
+      const storedRarity = window.sessionStorage.getItem(STORAGE_KEY_RARITY)
+      if (
+        storedRarity === 'ALL' ||
+        storedRarity === 'UR' ||
+        storedRarity === 'SR' ||
+        storedRarity === 'R' ||
+        storedRarity === 'N' ||
+        storedRarity === 'SE'
+      ) {
+        setSelectedRarity(storedRarity)
+      }
+    } catch {
+      // sessionStorage can throw in private mode; silently ignore.
+    }
+  }, [])
+
+  // Persist pack + rarity on every change.
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(STORAGE_KEY_PACK, selectedPack)
+      window.sessionStorage.setItem(STORAGE_KEY_RARITY, selectedRarity)
+    } catch {
+      // ignore quota / private-mode failures
+    }
+  }, [selectedPack, selectedRarity])
+
   // --- filter pipeline ---------------------------------------------------
+  // Query normalization is inlined into each memo so React Compiler can track
+  // the dependency directly (a derived top-level const would block compilation
+  // memoization preservation).
   const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
     return allCards.filter((c) => {
       if (selectedPack !== 'all' && !c.pack.includes(selectedPack)) return false
       if (selectedRarity !== 'ALL' && c.rare !== selectedRarity) return false
+      if (q) {
+        if (
+          !c.title.toLowerCase().includes(q) &&
+          !c.id.toLowerCase().includes(q)
+        ) {
+          return false
+        }
+      }
       return true
     })
-  }, [allCards, selectedPack, selectedRarity])
+  }, [allCards, selectedPack, selectedRarity, query])
+
+  // --- per-rarity counts (pack + query scope, ignoring rarity) -----------
+  // Used to annotate each rarity pill so a player browsing 「カードを描く前に」
+  // can see at a glance how many cards survive switching to SR vs. R, instead
+  // of clicking each pill blind.
+  const rarityCounts = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const counts: Record<Rarity | 'ALL', number> = {
+      ALL: 0, UR: 0, SR: 0, R: 0, N: 0, SE: 0,
+    }
+    for (const c of allCards) {
+      if (selectedPack !== 'all' && !c.pack.includes(selectedPack)) continue
+      if (q) {
+        if (
+          !c.title.toLowerCase().includes(q) &&
+          !c.id.toLowerCase().includes(q)
+        ) {
+          continue
+        }
+      }
+      counts.ALL += 1
+      counts[c.rare] += 1
+    }
+    return counts
+  }, [allCards, selectedPack, query])
 
   // --- pack picker: click-outside close ---------------------------------
   useEffect(() => {
@@ -227,19 +305,43 @@ export default function GalleryPage() {
         </AnimatePresence>
       </div>
 
-      {/* Rarity pill row */}
-      <div className="my-6 flex flex-wrap justify-center gap-3">
-        {RARITY_OPTIONS.map((r) => (
-          <StampBadge
-            key={r.key}
-            size="sm"
-            variant={selectedRarity === r.key ? 'fill-accent' : 'outline'}
-            jp={r.jp}
-            en={r.en}
-            onClick={() => setSelectedRarity(r.key)}
-            ariaLabel={`Filter rarity: ${r.en}`}
+      {/* Name search — placeholder mirrors the bilingual pattern of the pack
+          picker. Pressing Escape clears the field. */}
+      <div className="mx-auto mt-4 w-full max-w-[700px]">
+        <label className="block">
+          <span className="sr-only">カード名で検索 / Search by name</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setQuery('')
+            }}
+            placeholder="カード名で検索 / Search by name…"
+            className="h-11 w-full border-2 border-ink bg-paper-deep px-4 font-body text-base text-ink placeholder:text-ink-dim focus:outline-none focus:bg-paper md:h-14 md:text-lg"
+            aria-label="カード名で検索 / Search by name"
           />
-        ))}
+        </label>
+      </div>
+
+      {/* Rarity pill row — each pill is annotated with a live count of matches
+          within the current pack + search scope, so switching filters is
+          predictable instead of blind. */}
+      <div className="my-6 flex flex-wrap justify-center gap-3">
+        {RARITY_OPTIONS.map((r) => {
+          const count = rarityCounts[r.key]
+          return (
+            <StampBadge
+              key={r.key}
+              size="sm"
+              variant={selectedRarity === r.key ? 'fill-accent' : 'outline'}
+              jp={r.jp}
+              en={`${r.en} · ${count}`}
+              onClick={() => setSelectedRarity(r.key)}
+              ariaLabel={`Filter rarity: ${r.en} (${count} matching)`}
+            />
+          )
+        })}
       </div>
 
       {/* Card grid — verbatim zutomayocard.net spacing */}

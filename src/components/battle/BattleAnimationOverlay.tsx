@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useSfx } from '@/components/SfxProvider'
 
@@ -40,10 +40,18 @@ export default function BattleAnimationOverlay({
   onComplete,
 }: BattleAnimationOverlayProps) {
   const { play } = useSfx()
+  // StrictMode dev double-mounts would stack a second impact + damage-tick
+  // per battle. Latch on active→true; reset on active→false.
+  const firedRef = useRef(false)
 
   // SFX cues: impact on raise, follow-up damage tick if someone took damage.
   useEffect(() => {
-    if (!active) return
+    if (!active) {
+      firedRef.current = false
+      return
+    }
+    if (firedRef.current) return
+    firedRef.current = true
     play('impact')
     const damageId =
       battleResult && battleResult.loser !== null

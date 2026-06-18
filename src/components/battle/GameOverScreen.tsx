@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import StampBadge from '@/components/StampBadge'
 import { useSfx } from '@/components/SfxProvider'
 
@@ -35,9 +35,12 @@ export default function GameOverScreen({
   // Draws — same disk split in half so neither side dominates.
   const isDraw = winner === null
 
-  // Endgame sting cue on mount.
+  // Endgame sting cue on mount. Latched against StrictMode dev double-mount.
   const { play } = useSfx()
+  const playedRef = useRef(false)
   useEffect(() => {
+    if (playedRef.current) return
+    playedRef.current = true
     play('sting-end')
   }, [play])
 

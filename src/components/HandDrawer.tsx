@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import type { Card } from '@/types/game'
 import CardView from './CardView'
@@ -72,10 +72,19 @@ export default function HandDrawer({
   const [expanded, setExpanded] = useState(initialExpanded)
   const [selected, setSelected] = useState<number[]>([])
   const { play } = useSfx()
+  // StrictMode dev double-mounts would re-fire the open cue. Latch on
+  // expanded→true; reset on expanded→false so re-opens still cue.
+  const openFiredRef = useRef(false)
 
   // Drawer raise → flip cue.
   useEffect(() => {
-    if (expanded) play('card-flip')
+    if (!expanded) {
+      openFiredRef.current = false
+      return
+    }
+    if (openFiredRef.current) return
+    openFiredRef.current = true
+    play('card-flip')
   }, [expanded, play])
 
   const fitsFilter = (card: Card) => !filterClass || card.class === filterClass

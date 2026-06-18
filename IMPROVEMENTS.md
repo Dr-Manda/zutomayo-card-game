@@ -327,13 +327,13 @@ All filter/spotlight state lives in the component that maps 422 CardViews, each 
 
 ### 4.6 Font loading: drop unused Noto weights, add metric-adjacent JP fallbacks
 
-**Size:** M · **Status:** □ PLANNED (Session 1, batch 2) · **Files:** `src/app/layout.tsx:11-37`, `src/app/globals.css:46-49`
+**Size:** M · **Status:** ✓ SHIPPED (Session 1, 2026-06-18) · **Files:** `src/app/layout.tsx:11-37`, `src/app/globals.css:46-49`
 
 Render-blocking CSS is 408 KB raw / 129 KB gzip per route — ~95% of it @font-face rules. Noto Sans JP loads weights 400/500/700, but every bold/medium usage in src/ is on font-numeric (Barlow Condensed) elements (verified) — 500/700 can never render. Fix: change Noto to `weight: "400"` (saves ~60 KB gzip blocking CSS + ~4 MB of dead woff2 in the export). All four fonts also declare `subsets: ['latin']` only, so JP-first UI text (hero ずとまよ, every stamp, card titles) flashes Yu Gothic then swaps with layout shift. Cheap mitigation now: `fallback: ['Yu Gothic', 'YuGothic']` on both JP fonts. Optional follow-up: pyftsubset the ~100 chrome glyphs of Yusei Magic into a local preloaded woff2 via next/font/local, keeping the Google full font as supplement.
 
 ### 4.7 Sound hygiene: trim the 8-second ui-click, guard StrictMode double-fire
 
-**Size:** S · **Status:** □ PLANNED (Session 1, batch 2) · **Files:** `public/sfx/processed/ui-click.mp3`, `src/lib/sound.ts:97-113`, `src/components/CardBackCover.tsx:52-55`, `src/components/battle/BattleAnimationOverlay.tsx:44-55`, `src/components/HandDrawer.tsx:64-67`, `src/components/battle/RevealScreen.tsx:38-41`, `src/components/battle/GameOverScreen.tsx:39-42`
+**Size:** S · **Status:** ✓ SHIPPED (Session 1, 2026-06-18) — ui-click.mp3 trimmed 131,283 → 3,806 bytes (97% reduction) via `ffmpeg -t 0.25 -af afade=t=out:st=0.2:d=0.05`; useRef fired-flag guards added to CardBackCover/BattleAnimationOverlay/HandDrawer/RevealScreen/GameOverScreen so StrictMode dev double-mount no longer stacks cues. · **Files:** `public/sfx/processed/ui-click.mp3`, `src/lib/sound.ts:97-113`, `src/components/CardBackCover.tsx:52-55`, `src/components/battle/BattleAnimationOverlay.tsx:44-55`, `src/components/HandDrawer.tsx:64-67`, `src/components/battle/RevealScreen.tsx:38-41`, `src/components/battle/GameOverScreen.tsx:39-42`
 
 `ui-click.mp3` is 8.125 s (every other SFX is 4–32 KB) and `play()` has no sprite support, so every StampBadge click stacks overlapping 8-second cassette tails. Fix: re-export trimmed — `ffmpeg -i ui-click.mp3 -t 0.25 -af "afade=t=out:st=0.2:d=0.05" ...` (also cuts 128 KB → ~6 KB; preferred over adding sprite support). Separately, five components call `play()` in mount effects with no idempotency guard, so React 19 StrictMode dev double-fires every cue: move the calls into the event handlers that cause the transition, or add a `useRef` fired-flag mirroring BattleBoard's existing `prevChronos` pattern (`BattleBoard.tsx:64-73`).
 
@@ -351,7 +351,7 @@ Battle state is silent to screen readers and modals don't manage focus. Fixes: (
 
 ### 4.10 Gallery findability: name search, rarity counts, persistent filters
 
-**Size:** M · **Status:** □ PLANNED (Session 1, batch 2) · **Files:** `src/app/gallery/page.tsx:24-31, 53-59, 231-243`
+**Size:** M · **Status:** ✓ SHIPPED (Session 1, 2026-06-18) — search input filtering title+id (case-insensitive, Escape clears); per-rarity counts (within current pack+query scope) annotate each pill's EN label (`UR · 24`); selectedPack and selectedRarity persisted to sessionStorage and hydrated in a mount effect (SSG-safe). · **Files:** `src/app/gallery/page.tsx:24-31, 53-59, 231-243`
 
 With 422 cards the only tools are the pack dropdown and rarity pills — no name search (the most natural lookup for a fan), no result counts, and filters reset on every visit. Fix, all in gallery/page.tsx: (1) a `<input type="search">` styled like the pack picker (placeholder 「カード名で検索 / Search by name…」) filtering on `c.title.includes(query) || c.id.includes(query.toLowerCase())`; (2) per-rarity counts within the current pack+query scope via a `useMemo` Map, appended to each pill's `en` label; (3) persist selectedPack/selectedRarity to sessionStorage in an effect and hydrate in a mount effect (not a useState initializer — SSG-hydration-safe).
 

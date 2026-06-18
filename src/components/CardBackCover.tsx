@@ -49,10 +49,20 @@ export default function CardBackCover({
 }: CardBackCoverProps) {
   const { play } = useSfx()
   const btnRef = useRef<HTMLButtonElement | null>(null)
+  // StrictMode dev double-mounts the effect, which would stack two
+  // overlapping flip cues per overlay raise. Latch on the active→true
+  // edge, reset on active→false.
+  const firedRef = useRef(false)
 
   // Mount-time flip cue when the overlay raises.
   useEffect(() => {
-    if (active) play('card-flip')
+    if (!active) {
+      firedRef.current = false
+      return
+    }
+    if (firedRef.current) return
+    firedRef.current = true
+    play('card-flip')
   }, [active, play])
 
   // Move keyboard focus onto the cover button so a keyboard-only player can

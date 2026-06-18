@@ -15,13 +15,23 @@ const yuseiMagic = Yusei_Magic({
   weight: "400",
   subsets: ["latin"],
   display: "swap",
+  // Metric-adjacent system JP fonts so the FOUT swap doesn't shift layout for
+  // hero text (ずとまよ, stamps, card titles). next/font's auto Adjusted
+  // Fallback alone can't avoid the shift when neither subset nor the
+  // sibling Latin glyphs cover JP.
+  fallback: ["Yu Gothic", "YuGothic"],
 });
 
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
-  weight: ["400", "500", "700"],
+  // Weights 500/700 used to load but every bold/medium in src/ is on
+  // font-numeric (Barlow Condensed) elements — never rendered. Dropping
+  // them saves ~60 KB gzip of @font-face CSS + ~4 MB of dead woff2 in
+  // the exported static bundle.
+  weight: "400",
   subsets: ["latin"],
   display: "swap",
+  fallback: ["Yu Gothic", "YuGothic"],
 });
 
 const jetBrainsMono = JetBrains_Mono({
