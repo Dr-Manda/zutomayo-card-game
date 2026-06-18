@@ -1,0 +1,62 @@
+name: CI
+
+# Wave 4.3 — IMPROVEMENTS.md. Runs the full local gate stack against every
+# push and pull request: lint, type-check, vitest, Next build, and the
+# Playwright mobile E2E spec. The deploy workflow (deploy.yml) is gated on
+# CI completing successfully via the workflow_run trigger over there.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A second push to the same ref cancels the in-flight run so we don't
+# stack five concurrent Playwright jobs for a typo-fix sequence.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: lint + tsc + vitest + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Vitest (engine unit tests)
+        run: npm test
+      - name: Next build (static export)
+        run: npm run build
+
+  e2e:
+    name: playwright (mobile-chromium)
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Playwright tests
+        run: npm run e2e
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7

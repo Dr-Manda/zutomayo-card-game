@@ -209,7 +209,7 @@ export default function HandDrawer({
                     {/* `!w-[70px]` overrides CardView's fixed compact w-[164px] —
                         otherwise each card renders 2.3× its slot and spills 120px
                         past the bottom screen edge. */}
-                    <CardView card={card} compact className="!w-[70px]" />
+                    <CardView card={card} compact thumb className="!w-[70px]" />
                   </div>
                 )
               })}
@@ -290,6 +290,7 @@ export default function HandDrawer({
                       >
                         <CardView
                           card={card}
+                          thumb
                           selected={selected.includes(i)}
                           onClick={allowed ? () => toggleSelect(i) : undefined}
                           className={

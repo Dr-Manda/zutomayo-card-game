@@ -120,6 +120,7 @@ export default function PlayerField({
               player.battleZone.cost > totalPower
             }
             compact
+            thumb
             className="!w-full"
           />
         ) : (
@@ -139,7 +140,7 @@ export default function PlayerField({
           <div key={slot} className="flex flex-col items-center gap-1" dir="ltr">
             <StampBadge size="xs" variant="outline" jp={jp} en={en} />
             {card ? (
-              <CardView card={card} compact className="!w-full" />
+              <CardView card={card} compact thumb className="!w-full" />
             ) : (
               <div className="flex w-full aspect-[234/328] items-center justify-center border-2 border-dashed border-ink-secondary bg-paper-deep font-mono text-[10px] text-ink-dim">
                 {slot.toUpperCase()}

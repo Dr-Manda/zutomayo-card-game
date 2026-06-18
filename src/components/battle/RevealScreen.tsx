@@ -81,6 +81,7 @@ export default function RevealScreen({
                 card={p0Card}
                 chronosPosition={chronosPosition}
                 costGated={p0CostGated}
+                thumb
                 className="!w-full"
               />
             ) : (
@@ -102,6 +103,7 @@ export default function RevealScreen({
                 card={p1Card}
                 chronosPosition={chronosPosition}
                 costGated={p1CostGated}
+                thumb
                 className="!w-full"
               />
             ) : (

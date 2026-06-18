@@ -4,7 +4,11 @@ import { forwardRef, memo } from 'react'
 import Image from 'next/image'
 import type { Card } from '@/types/game'
 import { ATTRIBUTE_COLORS, ATTRIBUTE_EN, RARITY_COLORS } from '@/lib/theme'
-import { getLocalCardPath, getCardBackPath } from '@/lib/cardAssets'
+import {
+  getLocalCardPath,
+  getLocalCardThumbPath,
+  getCardBackPath,
+} from '@/lib/cardAssets'
 import { getTimePhase } from '@/lib/chronos'
 import StampBadge from './StampBadge'
 
@@ -25,6 +29,12 @@ export interface CardViewProps {
    *  by the 422-cell gallery grid where the spotlight is the source of truth
    *  for metadata, so the chrome would be illegible noise at ~117 px wide. */
   bare?: boolean
+  /** When true, sources the artwork from the 480px-wide thumbnail JPEG instead
+   *  of the 700×978 source scan. Use everywhere the card renders ≤ ~234 px wide
+   *  (gallery grid, hand drawer, player field, reveal screen). The gallery
+   *  Spotlight — the only site that exceeds 234 px wide — must leave this
+   *  off so the hero card stays sharp. */
+  thumb?: boolean
   onClick?: () => void
   className?: string
 }
@@ -50,6 +60,7 @@ function CardViewImpl(
     chronosPosition,
     costGated = false,
     bare = false,
+    thumb = false,
     onClick,
     className = '',
   }: CardViewProps,
@@ -103,7 +114,7 @@ function CardViewImpl(
           />
         ) : (
           <Image
-            src={getLocalCardPath(card)}
+            src={thumb ? getLocalCardThumbPath(card) : getLocalCardPath(card)}
             alt={card.title}
             width={234}
             height={328}
@@ -264,6 +275,7 @@ export function CardMini({
     <CardView
       card={card}
       compact
+      thumb
       onClick={onClick}
       selected={selected}
       className={className}

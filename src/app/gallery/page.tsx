@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import type { Card, Rarity } from '@/types/game'
 import { getAllCards, getPackNames } from '@/lib/deckBuilder'
 import { ATTRIBUTE_EN } from '@/lib/theme'
+import { getLocalCardPath } from '@/lib/cardAssets'
 import CardView from '@/components/CardView'
 import StampBadge from '@/components/StampBadge'
 
@@ -224,6 +225,27 @@ export default function GalleryPage() {
       window.history.replaceState(null, '', `#${selectedCard.id}`)
     }
   }, [selectedCard])
+
+  // Preload the full-res image for the two spotlight neighbors so arrow-key
+  // navigation feels instant. Without this each step waits 300–800ms for the
+  // 700×978 source to fetch. The grid already used the 480px thumb so the
+  // browser cache only holds that; we want the *next* full-res before it's
+  // asked for. Two cards × ≤500 KB = a cheap prefetch budget.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!selectedCard || filtered.length === 0) return
+    const idx = filtered.findIndex((c) => c.id === selectedCard.id)
+    if (idx === -1) return
+    const neighbors = [
+      filtered[(idx - 1 + filtered.length) % filtered.length],
+      filtered[(idx + 1) % filtered.length],
+    ]
+    for (const n of neighbors) {
+      if (!n) continue
+      const img = new window.Image()
+      img.src = getLocalCardPath(n)
+    }
+  }, [selectedCard, filtered])
 
   // On mount: if a hash matches a known card, open the spotlight.
   useEffect(() => {
@@ -806,6 +828,7 @@ const GalleryCell = memo(function GalleryCell({
       ref={handleRef}
       card={card}
       bare
+      thumb
       onClick={handleClick}
       className="!w-full"
     />
