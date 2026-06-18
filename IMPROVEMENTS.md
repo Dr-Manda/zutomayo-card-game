@@ -2,6 +2,15 @@
 
 Synthesized 2026-06-10 from six independent review reports: official-rules accuracy, engine/state-machine correctness, UX + mobile usability, performance, GitHub Pages deploy readiness, and accessibility/polish. Duplicates have been merged; 40 items total.
 
+## Progress (last updated 2026-06-18)
+
+- **Wave 1** (correctness blockers, 9 items) — ✓ SHIPPED.
+- **Wave 2** (core experience, 13 items) — ✓ SHIPPED.
+- **Wave 3** (ship-it polish, 8 items) — ✓ SHIPPED.
+- **Wave 3.5** (QA-discovered regressions, 2 items) — ✓ SHIPPED (Session 1, 2026-06-18). See "Wave 3.5" section below.
+- **Wave 4** (depth & hygiene, 10 items) — IN PROGRESS across multiple sessions. Per-item status is on each subsection heading.
+  - 4.1 (card-effect engine) — DEFERRED to its own dedicated session.
+
 ## How to use this file
 
 - This backlog is designed to be handed to Claude (ultracode) **one wave at a time**. Each wave is independently shippable: the app builds, runs, and is strictly better after each one.
@@ -260,13 +269,33 @@ Pages automatically serves `out/404.html` (verified emitted), but without `src/a
 
 ---
 
+## Wave 3.5 — QA-discovered regressions (2 items)
+
+Surfaced by the live QA pass against the deployed build (`TESTING_PROMPT.md`, run 2026-06-18). Two items qualify as Wave 1–3 regressions; the rest of the QA findings are Wave 4 GAP-OBSERVED confirmations and are tracked inline on those items. Ship before continuing Wave 4 so the next session inherits a clean baseline.
+
+### 3.5.1 RevealScreen kanji: 嫌！→ 公開！
+
+**Size:** XS · **Files:** `src/components/battle/RevealScreen.tsx:53` · **Status:** ✓ SHIPPED (Session 1, 2026-06-18)
+
+The reveal headline read `嫌！/ Reveal!`. 嫌 means "dislike / refuse" in JP and reads as visually wrong next to the EN gloss "Reveal!" — composer likely meant a stylistic exclamation but it pairs as an emotional refusal to a JP audience. Replaced with 公開！ to match the existing phase-label "カード公開" used in BattleBoard.
+
+### 3.5.2 Cost-gated attack overlay still shows printed face value
+
+**Size:** S · **Files:** `src/components/CardView.tsx`, `src/components/PlayerField.tsx`, `src/components/battle/RevealScreen.tsx`, `src/app/battle/page.tsx` · **Status:** ✓ SHIPPED (Session 1, 2026-06-18)
+
+The engine power-cost gate (Wave 1.10) correctly clamps a Character's attack to 0 when `card.cost > calculateTotalPower(player)` inside `calculateBattle`, but `CardView.showPowerOverlay` rendered `card.night_attack` / `card.noon_attack` unconditionally. Players saw "30 vs 0" on turn 1 with empty Power Chargers but the resolver read "0 vs 0 / draw" — misleading even though the engine was right.
+
+Fix: added a `costGated?: boolean` prop to `CardView`. When true with the power overlay active, the stamp renders neutral `bg-ink-secondary` with `0` (instead of the night/day color + printed value) and the aria-label states "Attack 0 — cost N not paid (printed M)". `PlayerField` computes `card.class === 'Character' && card.cost > totalPower` for the battleZone slot and passes through. `RevealScreen` accepts `p0CostGated` / `p1CostGated` props; `battle/page.tsx` computes them via `calculateTotalPower` and threads them through.
+
+---
+
 ## Wave 4 — Depth & hygiene (10 items)
 
 The card-effect engine, tests, CI, performance, and deep accessibility.
 
 ### 4.1 Card-effect engine: pattern-based interpreter with official priority-player ordering
 
-**Size:** L · **Files:** new `src/lib/effects.ts`, `src/hooks/useGame.ts:116-119` (the no-op `process_effects` case), `src/lib/gameEngine.ts` (calculateBattle, chronos), `src/data/cards.json`, `src/components/battle/PregameScreen.tsx`, `src/hooks/useGame.ts:41-50`
+**Size:** L · **Status:** ▣ DEFERRED to its own dedicated session (Session 3). The other 4.x items ship first so this lands on a clean baseline. · **Files:** new `src/lib/effects.ts`, `src/hooks/useGame.ts:116-119` (the no-op `process_effects` case), `src/lib/gameEngine.ts` (calculateBattle, chronos), `src/data/cards.json`, `src/components/battle/PregameScreen.tsx`, `src/hooks/useGame.ts:41-50`
 
 251 of 422 cards carry effect text but `process_effects` does nothing — ~60% of every card's identity is dead. Official turn step 6: 「キャラクター、エンチャント、エリアエンチャントに効果が記載されている場合、クロノス上のメダルがある側から効果を発動します。※各カードのパワーコストが足りていない場合、効果は発動しません」 — effects fire starting from the player on whose seat side (night/day) the Chronos medal currently sits; that priority player resolves all of their effects in any order first; power cost is evaluated **at the moment the effect is processed**; and 「どちらかのHPが０になった瞬間にゲームは終了します」 — HP-0 ends the game the instant it happens, so effect damage/heal must check the winner immediately, not only after battle.
 
@@ -274,55 +303,55 @@ Build `src/lib/effects.ts` as a pattern-matcher over effect strings producing ty
 
 ### 4.2 Engine unit tests (vitest)
 
-**Size:** M · **Files:** new `vitest.config.ts`, new `src/lib/__tests__/gameEngine.test.ts` (and `effects.test.ts` alongside 4.1)
+**Size:** M · **Status:** □ PENDING (Session 2) · **Files:** new `vitest.config.ts`, new `src/lib/__tests__/gameEngine.test.ts` (and `effects.test.ts` alongside 4.1)
 
 The engine is pure functions over `GameState` — ideal test surface, currently zero tests. Add vitest and cover, at minimum, every Wave 1 fix as a regression test: end-of-turn draw counts (winner 1 / loser 2 / draw 1 / turn 1), advanceTime summing only this turn's hand-played clocks (incl. the turn-1 prep-clock branch from 1.4), end-of-turn sweep of ALL set-zone leftovers, mulligan draw-before-shuffle (seed/stub the shuffle), simultaneous deck-out → draw, power-cost attack-0 (「キャラクターのパワーコストが足りていない場合、キャラクターの最終的な攻撃力は０となります」), HP-0 immediate end, replacement A-priority, and chronos night/day mapping (night = positions 9–2, day = 3–8, midnight = 0). Use fixed card fixtures rather than the full cards.json where possible.
 
 ### 4.3 Playwright E2E battle flow + CI workflow
 
-**Size:** M · **Files:** new `playwright.config.ts`, new `e2e/battle.spec.ts`, new `.github/workflows/ci.yml` · **Depends on:** 4.2
+**Size:** M · **Status:** □ PENDING (Session 2) · **Files:** new `playwright.config.ts`, new `e2e/battle.spec.ts`, new `.github/workflows/ci.yml` · **Depends on:** 4.2
 
 Add one Playwright spec that plays a full hot-seat turn loop at 390×844: start game → janken/pregame → both mulligans (verifying the pass cover fully hides P1's hand — regression for 1.8) → initial placement (including a non-Character placement, regression for 1.4) → reveal → several full turns of set/pass/phase taps → assert HP/log changes and no horizontal scroll (regression for 2.2). Add `.github/workflows/ci.yml` running `npm ci`, lint, `tsc --noEmit`, `vitest run`, `npm run build`, and the Playwright job on push/PR; make the Pages deploy workflow (3.1) depend on CI passing if desired.
 
 ### 4.4 Generate card thumbnails — stop fetching 150 MB of 700×978 scans into ~110-240px cells
 
-**Size:** M · **Files:** new `scripts/make-thumbs.mjs`, `src/lib/cardAssets.ts`, `src/components/CardView.tsx:89-96`, `src/app/gallery/page.tsx:246-255`, plus HandDrawer/PlayerField/battle zones
+**Size:** M · **Status:** □ PENDING (Session 2) · **Files:** new `scripts/make-thumbs.mjs`, `src/lib/cardAssets.ts`, `src/components/CardView.tsx:89-96`, `src/app/gallery/page.tsx:246-255`, plus HandDrawer/PlayerField/battle zones
 
 Card JPGs are 700×978, avg 361 KB, 149.65 MB total (94% of the export); with `images.unoptimized: true` there is no srcset, so the gallery grid pulls ~14 MB on first paint and ~150 MB on a full scroll, and battle screens fetch full-size files for 164–234px renders. Fix: one-shot sharp script writing `public/cards/thumbs/<same-name>.jpg` at 480px wide / quality ~70 (~18 MB total, still 2× DPR for 240px cells); add `getLocalCardThumbPath(card)` to `cardAssets.ts` and a `thumb` boolean prop on CardView; pass `thumb` everywhere except the gallery Spotlight, which keeps full-res. Expected: gallery initial transfer ~14 MB → ~1.5 MB. Also preload spotlight neighbors: a `useEffect` keyed on `selectedCard` that sets `new window.Image().src = getLocalCardPath(neighbor)` for `filtered[idx±1]`, so arrow-key navigation stops waiting 300–800 ms per step.
 
 ### 4.5 Gallery render performance: bare grid variant + memoized cells
 
-**Size:** M · **Files:** `src/components/CardView.tsx:33, 99-161`, `src/app/gallery/page.tsx:46-47, 84-104, 246-255`
+**Size:** M · **Status:** □ PLANNED (Session 1, batch 3) · **Files:** `src/components/CardView.tsx:33, 99-161`, `src/app/gallery/page.tsx:46-47, 84-104, 246-255`
 
 All filter/spotlight state lives in the component that maps 422 CardViews, each with a fresh inline onClick — every arrow-key step and filter toggle reconciles all 422 cells (thousands of nodes). At ~117px cells the full CardView chrome (attribute kanji, sub-legible rarity stamp, duplicate caption) is also pure noise. Fix: (1) `export default React.memo(CardView)`; (2) a memoized `GalleryCell` receiving `card` + a stable `useCallback` `onSelect`; (3) add a `bare?: boolean` CardView prop rendering only the bordered artwork window (metadata is already in the spotlight) and use it in the grid, with a `bg-paper-deep` placeholder class on the artwork window so unloaded cells read as intentional slots.
 
 ### 4.6 Font loading: drop unused Noto weights, add metric-adjacent JP fallbacks
 
-**Size:** M · **Files:** `src/app/layout.tsx:11-37`, `src/app/globals.css:46-49`
+**Size:** M · **Status:** □ PLANNED (Session 1, batch 2) · **Files:** `src/app/layout.tsx:11-37`, `src/app/globals.css:46-49`
 
 Render-blocking CSS is 408 KB raw / 129 KB gzip per route — ~95% of it @font-face rules. Noto Sans JP loads weights 400/500/700, but every bold/medium usage in src/ is on font-numeric (Barlow Condensed) elements (verified) — 500/700 can never render. Fix: change Noto to `weight: "400"` (saves ~60 KB gzip blocking CSS + ~4 MB of dead woff2 in the export). All four fonts also declare `subsets: ['latin']` only, so JP-first UI text (hero ずとまよ, every stamp, card titles) flashes Yu Gothic then swaps with layout shift. Cheap mitigation now: `fallback: ['Yu Gothic', 'YuGothic']` on both JP fonts. Optional follow-up: pyftsubset the ~100 chrome glyphs of Yusei Magic into a local preloaded woff2 via next/font/local, keeping the Google full font as supplement.
 
 ### 4.7 Sound hygiene: trim the 8-second ui-click, guard StrictMode double-fire
 
-**Size:** S · **Files:** `public/sfx/processed/ui-click.mp3`, `src/lib/sound.ts:97-113`, `src/components/CardBackCover.tsx:52-55`, `src/components/battle/BattleAnimationOverlay.tsx:44-55`, `src/components/HandDrawer.tsx:64-67`, `src/components/battle/RevealScreen.tsx:38-41`, `src/components/battle/GameOverScreen.tsx:39-42`
+**Size:** S · **Status:** □ PLANNED (Session 1, batch 2) · **Files:** `public/sfx/processed/ui-click.mp3`, `src/lib/sound.ts:97-113`, `src/components/CardBackCover.tsx:52-55`, `src/components/battle/BattleAnimationOverlay.tsx:44-55`, `src/components/HandDrawer.tsx:64-67`, `src/components/battle/RevealScreen.tsx:38-41`, `src/components/battle/GameOverScreen.tsx:39-42`
 
 `ui-click.mp3` is 8.125 s (every other SFX is 4–32 KB) and `play()` has no sprite support, so every StampBadge click stacks overlapping 8-second cassette tails. Fix: re-export trimmed — `ffmpeg -i ui-click.mp3 -t 0.25 -af "afade=t=out:st=0.2:d=0.05" ...` (also cuts 128 KB → ~6 KB; preferred over adding sprite support). Separately, five components call `play()` in mount effects with no idempotency guard, so React 19 StrictMode dev double-fires every cue: move the calls into the event handlers that cause the transition, or add a `useRef` fired-flag mirroring BattleBoard's existing `prevChronos` pattern (`BattleBoard.tsx:64-73`).
 
 ### 4.8 prefers-reduced-motion support (MotionConfig + CSS + SMIL guard)
 
-**Size:** M · **Files:** `src/app/layout.tsx` (app-wide client wrapper, post-3.3), `src/app/globals.css:72-74, 150-157`, `src/components/ChronosClock.tsx:114-121`
+**Size:** M · **Status:** □ PLANNED (Session 1, batch 3) · **Files:** `src/app/layout.tsx` (app-wide client wrapper, post-3.3), `src/app/globals.css:72-74, 150-157`, `src/components/ChronosClock.tsx:114-121`
 
 Nothing references reduced motion; motion-sensitive users get every Framer slide/scale, the battle shake (`x: [0,-6,6,-4,4,0]`), CSS shakeHit, smooth scroll, and an infinitely repeating SMIL opacity pulse on the clock medal. Three pieces: (1) wrap children in `<MotionConfig reducedMotion="user">` from `motion/react` in the app-wide client wrapper (after 3.3 this is `SfxProvider` itself); (2) add a `@media (prefers-reduced-motion: reduce)` block in globals.css: `html { scroll-behavior: auto }`, disable `.animate-fade-in/.animate-slide-up/.animate-shake`, `* { transition-duration: 0.01ms !important }`; (3) in ChronosClock use `useReducedMotion()` and conditionally render the `<animate>` element — SMIL is immune to CSS media queries and must be removed from the DOM.
 
 ### 4.9 Screen-reader announcements and dialog focus management
 
-**Size:** M · **Files:** `src/components/battle/BattleBoard.tsx:152-166`, `src/components/PlayerField.tsx:72-87`, `src/components/ChronosClock.tsx:33`, `src/components/battle/BattleAnimationOverlay.tsx:67-77`, `src/components/HandDrawer.tsx:154-253`, `src/app/gallery/page.tsx:95-104, 301-313`
+**Size:** M · **Status:** □ PLANNED (Session 1, batch 3) · **Files:** `src/components/battle/BattleBoard.tsx:152-166`, `src/components/PlayerField.tsx:72-87`, `src/components/ChronosClock.tsx:33`, `src/components/battle/BattleAnimationOverlay.tsx:67-77`, `src/components/HandDrawer.tsx:154-253`, `src/app/gallery/page.tsx:95-104, 301-313`
 
 Battle state is silent to screen readers and modals don't manage focus. Fixes: (a) `aria-live="polite"` on the game log `<ul>` (appended `<li>`s announce); (b) HP track div gets `role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={player.hp} aria-label={...}`; (c) `aria-hidden="true"` on the ChronosClock `<svg>` (the text readout below is the accessible representation); (d) BattleAnimationOverlay's `aria-live` never announces because the region mounts WITH its content — instead keep a permanently-mounted visually-hidden assertive live region in BattlePage and set its text when the battle result is computed; (e) HandDrawer: add `aria-modal="true"`, Escape-to-close (the gallery Spotlight already handles Escape; the drawer used dozens of times per battle does not), focus the first card button on open, and restore focus to the fan button on close; (f) Spotlight: focus the close control on open and restore focus to the originating grid cell on close. Initial-focus + Escape + restore is sufficient; a full focus trap is nice-to-have.
 
 ### 4.10 Gallery findability: name search, rarity counts, persistent filters
 
-**Size:** M · **Files:** `src/app/gallery/page.tsx:24-31, 53-59, 231-243`
+**Size:** M · **Status:** □ PLANNED (Session 1, batch 2) · **Files:** `src/app/gallery/page.tsx:24-31, 53-59, 231-243`
 
 With 422 cards the only tools are the pack dropdown and rarity pills — no name search (the most natural lookup for a fan), no result counts, and filters reset on every visit. Fix, all in gallery/page.tsx: (1) a `<input type="search">` styled like the pack picker (placeholder 「カード名で検索 / Search by name…」) filtering on `c.title.includes(query) || c.id.includes(query.toLowerCase())`; (2) per-rarity counts within the current pack+query scope via a `useMemo` Map, appended to each pill's `en` label; (3) persist selectedPack/selectedRarity to sessionStorage in an effect and hydrate in a mount effect (not a useState initializer — SSG-hydration-safe).
 

@@ -11,6 +11,11 @@ export interface RevealScreenProps {
   p0Card: Card | null
   p1Card: Card | null
   chronosPosition: number
+  /** Pre-computed: P1's Character would have its attack forced to 0 because
+   *  cost > calculateTotalPower(player). Lets the CardView overlay render the
+   *  same value calculateBattle will use. */
+  p0CostGated?: boolean
+  p1CostGated?: boolean
   /** Fires when the user taps the start-battle stamp. */
   onContinue: () => void
 }
@@ -30,6 +35,8 @@ export default function RevealScreen({
   p0Card,
   p1Card,
   chronosPosition,
+  p0CostGated = false,
+  p1CostGated = false,
   onContinue,
 }: RevealScreenProps) {
   const { play } = useSfx()
@@ -50,7 +57,7 @@ export default function RevealScreen({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.45, ease: [0.22, 0.61, 0.36, 1] }}
         >
-          嫌！/ Reveal!
+          公開！/ Reveal!
         </motion.h2>
 
         {/* ─── Two battle cards, sliding from opposite sides ──────── */}
@@ -65,7 +72,12 @@ export default function RevealScreen({
           >
             <StampBadge size="xs" variant="outline" jp="P1" en="PLAYER 1" />
             {p0Card ? (
-              <CardView card={p0Card} chronosPosition={chronosPosition} className="!w-full" />
+              <CardView
+                card={p0Card}
+                chronosPosition={chronosPosition}
+                costGated={p0CostGated}
+                className="!w-full"
+              />
             ) : (
               <EmptySlot />
             )}
@@ -81,7 +93,12 @@ export default function RevealScreen({
           >
             <StampBadge size="xs" variant="outline" jp="P2" en="PLAYER 2" />
             {p1Card ? (
-              <CardView card={p1Card} chronosPosition={chronosPosition} className="!w-full" />
+              <CardView
+                card={p1Card}
+                chronosPosition={chronosPosition}
+                costGated={p1CostGated}
+                className="!w-full"
+              />
             ) : (
               <EmptySlot />
             )}

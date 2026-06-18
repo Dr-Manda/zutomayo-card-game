@@ -14,6 +14,11 @@ export interface CardViewProps {
   compact?: boolean
   /** 0-11 — when provided, overlays the active attack matching night/day phase. */
   chronosPosition?: number
+  /** When true AND a power overlay would otherwise render, the overlay shows
+   *  0 on a neutral gray background — mirroring the engine's cost-gate rule
+   *  「キャラクターのパワーコストが足りていない場合、キャラクターの最終的な攻撃力は０となります」.
+   *  Parent must compute `card.cost > calculateTotalPower(player)`. */
+  costGated?: boolean
   onClick?: () => void
   className?: string
 }
@@ -36,6 +41,7 @@ export default function CardView({
   selected = false,
   compact = false,
   chronosPosition,
+  costGated = false,
   onClick,
   className = '',
 }: CardViewProps) {
@@ -132,15 +138,27 @@ export default function CardView({
 
         {/* Power overlay — bottom-center stamp with the attack value that
             matches the current Chronos phase. Tealish (night) or pinkish
-            (day) fill, white knockout numerals in Barlow Condensed. */}
+            (day) fill, white knockout numerals in Barlow Condensed. When
+            `costGated` is true the engine will force this Character's final
+            attack to 0 (cost > player power); the stamp renders neutral
+            gray with `0` so the visible number matches what calculateBattle
+            will actually use. */}
         {showPowerOverlay && (
           <div
             className={`absolute bottom-2 left-1/2 -translate-x-1/2 border-2 border-ink px-3 py-1 font-numeric text-[24px] font-bold leading-none text-white ${
-              timePhase === 'night' ? 'bg-night-deep' : 'bg-accent-deep'
+              costGated
+                ? 'bg-ink-secondary'
+                : timePhase === 'night'
+                  ? 'bg-night-deep'
+                  : 'bg-accent-deep'
             }`}
-            aria-label={`${timePhase === 'night' ? 'Night' : 'Day'} attack ${activeAttack}`}
+            aria-label={
+              costGated
+                ? `Attack 0 — cost ${card.cost} not paid (printed ${activeAttack})`
+                : `${timePhase === 'night' ? 'Night' : 'Day'} attack ${activeAttack}`
+            }
           >
-            {activeAttack}
+            {costGated ? 0 : activeAttack}
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGame } from '@/hooks/useGame'
-import { calculateBattle } from '@/lib/gameEngine'
+import { calculateBattle, calculateTotalPower } from '@/lib/gameEngine'
 import CardBackCover from '@/components/CardBackCover'
 import PregameScreen from '@/components/battle/PregameScreen'
 import MulliganScreen from '@/components/battle/MulliganScreen'
@@ -267,11 +267,25 @@ function BattleSession({ onReplay }: { onReplay: () => void }) {
       />
     )
   } else if (underlyingSubScreen === 'reveal') {
+    const p0Card = gameState.players[0].battleZone
+    const p1Card = gameState.players[1].battleZone
+    // Cost-gate mirrors calculateBattle: a Character whose printed cost exceeds
+    // the player's current total power has its attack forced to 0. Surfacing it
+    // at reveal time keeps the rendered overlay honest about what the battle
+    // phase will resolve to.
+    const p0CostGated =
+      p0Card?.class === 'Character' &&
+      p0Card.cost > calculateTotalPower(gameState.players[0])
+    const p1CostGated =
+      p1Card?.class === 'Character' &&
+      p1Card.cost > calculateTotalPower(gameState.players[1])
     body = (
       <RevealScreen
-        p0Card={gameState.players[0].battleZone}
-        p1Card={gameState.players[1].battleZone}
+        p0Card={p0Card}
+        p1Card={p1Card}
         chronosPosition={gameState.chronosPosition}
+        p0CostGated={p0CostGated}
+        p1CostGated={p1CostGated}
         onContinue={() => setSubScreen('phase_flow')}
       />
     )

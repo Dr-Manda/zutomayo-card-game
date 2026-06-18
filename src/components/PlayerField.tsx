@@ -99,6 +99,13 @@ export default function PlayerField({
           <CardView
             card={player.battleZone}
             chronosPosition={chronosPosition}
+            // Cost-gate: a Character whose cost > current total power gets
+            // forced to 0 attack inside calculateBattle. Surfacing it here
+            // lets the rendered overlay match what the resolver will use.
+            costGated={
+              player.battleZone.class === 'Character' &&
+              player.battleZone.cost > totalPower
+            }
             compact
             className="!w-full"
           />
