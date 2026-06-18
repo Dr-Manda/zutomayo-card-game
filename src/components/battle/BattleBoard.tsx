@@ -185,7 +185,16 @@ export default function BattleBoard({
           <p className="font-mono text-[9px] uppercase tracking-widest text-ink-dim mb-1">
             ログ / LOG
           </p>
-          <ul className="hairline-list flex flex-col">
+          {/* aria-live="polite" + atomic=false so appended <li> entries are
+              announced as additions to the log, not as a full re-read every
+              update. Screen-reader users get the same per-resolution feedback
+              that sighted players get from the transient caption above. */}
+          <ul
+            className="hairline-list flex flex-col"
+            aria-live="polite"
+            aria-atomic="false"
+            aria-relevant="additions"
+          >
             {gameState.log.slice(-5).map((msg, i) => (
               <li
                 key={`${i}-${msg.slice(0, 10)}`}

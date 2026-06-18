@@ -80,9 +80,12 @@ export default function BattleAnimationOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          role="status"
-          aria-live="polite"
-          aria-label="Battle resolution"
+          // The visual overlay is hidden from AT — the announcement comes
+          // from the permanently-mounted assertive live region in BattlePage
+          // (which can fire on transition because it doesn't mount with its
+          // content). Without aria-hidden, screen readers would also read the
+          // pre-animation "0 VS 0" text, which is confusing.
+          aria-hidden="true"
         >
           <div className="flex flex-col items-center gap-6">
             {/* ─── VS row ─────────────────────────────────────────── */}

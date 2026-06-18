@@ -1,5 +1,6 @@
 'use client'
 
+import { useReducedMotion } from 'motion/react'
 import { getTimePhase, getPositionLabel, CHRONOS_POSITIONS } from '@/lib/chronos'
 
 interface ChronosClockProps {
@@ -8,6 +9,10 @@ interface ChronosClockProps {
 }
 
 export default function ChronosClock({ position, size = 240 }: ChronosClockProps) {
+  // Reduced-motion path: drop the SMIL pulse. SMIL is immune to the global CSS
+  // media query so it has to be removed from the DOM rather than disabled.
+  // The text readout below the clock is the accessible representation.
+  const prefersReducedMotion = useReducedMotion()
   const timePhase = getTimePhase(position)
   const label = getPositionLabel(position)
   const center = size / 2
@@ -30,7 +35,15 @@ export default function ChronosClock({ position, size = 240 }: ChronosClockProps
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* SVG is a redundant visual restatement of the text readout below.
+          Hide from AT so screen readers don't enumerate the dome paths and
+          tick lines — the position label + day/night text covers it. */}
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        aria-hidden="true"
+      >
         <defs>
           <pattern id="halftone-teal-clock" patternUnits="userSpaceOnUse" width="8" height="8">
             <rect width="8" height="8" fill="#f1ece2" />
@@ -104,7 +117,8 @@ export default function ChronosClock({ position, size = 240 }: ChronosClockProps
           height={10}
           fill="#F15060"
         />
-        {/* Ink layer on top */}
+        {/* Ink layer on top. The SMIL <animate> is conditionally omitted under
+            prefers-reduced-motion — see the useReducedMotion call above. */}
         <rect
           x={medalX - 5}
           y={medalY - 5}
@@ -112,12 +126,14 @@ export default function ChronosClock({ position, size = 240 }: ChronosClockProps
           height={10}
           fill="#1a1a1a"
         >
-          <animate
-            attributeName="opacity"
-            values="1;0.7;1"
-            dur="2s"
-            repeatCount="indefinite"
-          />
+          {!prefersReducedMotion && (
+            <animate
+              attributeName="opacity"
+              values="1;0.7;1"
+              dur="2s"
+              repeatCount="indefinite"
+            />
+          )}
         </rect>
       </svg>
 

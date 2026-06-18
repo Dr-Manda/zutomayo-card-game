@@ -66,6 +66,10 @@ export default function PlayerField({
   )
 
   // ---- HP Bar ----
+  // role="meter" tells AT this is a bounded numeric readout (HP 0-100); the
+  // visual fill is purely cosmetic and is aria-hidden through the missing
+  // accessible name on the inner div. The aria-valuetext line gives speech
+  // output the friendly "Player N HP: 73 of 100" form instead of "0.73".
   const HPBar = (
     <div className="mb-3">
       <div className="flex justify-between font-mono text-xs mb-0.5">
@@ -74,10 +78,19 @@ export default function PlayerField({
           {player.hp}/100
         </span>
       </div>
-      <div className="h-2 bg-paper-deep border border-ink">
+      <div
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.max(0, Math.min(100, player.hp))}
+        aria-valuetext={`${label} HP: ${player.hp} of 100`}
+        aria-label={`${label} HP`}
+        className="h-2 bg-paper-deep border border-ink"
+      >
         <div
           className={`h-full ${hpFillClass} transition-all duration-500`}
           style={{ width: `${Math.max(0, Math.min(100, player.hp))}%` }}
+          aria-hidden="true"
         />
       </div>
     </div>

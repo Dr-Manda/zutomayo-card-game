@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback, memo } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'motion/react'
 import type { Card, Rarity } from '@/types/game'
@@ -53,8 +53,15 @@ export default function GalleryPage() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [packOpen, setPackOpen] = useState(false)
   const [query, setQuery] = useState<string>('')
+  // Last card the user opened the spotlight from (or stepped to). Drives focus
+  // restoration when the spotlight closes — the keyboard user lands back on
+  // the cell they were on instead of the page body.
+  const [openerCardId, setOpenerCardId] = useState<string | null>(null)
 
   const packPickerRef = useRef<HTMLDivElement | null>(null)
+  // Map of card.id → its grid cell button so we can restore focus on close.
+  // Populated/cleaned by GalleryCell via the registerCellRef callback.
+  const cellRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map())
 
   // Restore persisted pack + rarity on mount. Hydrating in an effect rather
   // than the useState initializer keeps the SSG-rendered HTML stable (the
@@ -166,9 +173,37 @@ export default function GalleryPage() {
       if (idx === -1) return
       const next = filtered[(idx + dir + filtered.length) % filtered.length]
       setSelectedCard(next)
+      // Track the currently-viewed card so close restores focus to the cell
+      // the user actually closed on, not the one they originally opened.
+      setOpenerCardId(next.id)
     },
     [filtered, selectedCard],
   )
+
+  // Stable cell select / ref registration callbacks so GalleryCell's memo
+  // is preserved across filter changes (the 422-cell grid otherwise rebuilds
+  // every cell on every state tick).
+  const handleCardSelect = useCallback((card: Card) => {
+    setOpenerCardId(card.id)
+    setSelectedCard(card)
+  }, [])
+  const registerCellRef = useCallback(
+    (id: string, el: HTMLButtonElement | null) => {
+      if (el) cellRefs.current.set(id, el)
+      else cellRefs.current.delete(id)
+    },
+    [],
+  )
+
+  // Focus restoration: when the spotlight closes (selectedCard → null) and a
+  // last-opened cell is remembered, hand focus back so keyboard users can
+  // continue tabbing from where they were. Click users see no difference.
+  useEffect(() => {
+    if (selectedCard) return
+    if (!openerCardId) return
+    const btn = cellRefs.current.get(openerCardId)
+    btn?.focus()
+  }, [selectedCard, openerCardId])
 
   useEffect(() => {
     if (!selectedCard) return
@@ -344,14 +379,16 @@ export default function GalleryPage() {
         })}
       </div>
 
-      {/* Card grid — verbatim zutomayocard.net spacing */}
+      {/* Card grid — verbatim zutomayocard.net spacing. Each cell is its own
+          memo'd component with stable callbacks so filter/spotlight changes
+          only re-render the handful of cells whose props actually moved. */}
       <div className="grid grid-cols-3 gap-[7px] md:grid-cols-5 md:gap-[10px]">
         {filtered.map((card) => (
-          <CardView
+          <GalleryCell
             key={card.id}
             card={card}
-            onClick={() => setSelectedCard(card)}
-            className="!w-full"
+            onSelect={handleCardSelect}
+            registerRef={registerCellRef}
           />
         ))}
       </div>
@@ -392,6 +429,18 @@ function Spotlight({ card, onClose, onPrev, onNext }: SpotlightProps) {
   const cardNumber = card.id.match(/(\d+)/)?.[1] ?? card.id
   const packLabel = card.pack[0] ?? '—'
   const attrEn = ATTRIBUTE_EN[card.type]
+
+  // Move keyboard focus onto the close control as soon as the spotlight
+  // mounts so Enter/Space dismiss it without an extra Tab cycle. The
+  // restore-to-opener handoff is owned by the gallery page's effect.
+  useEffect(() => {
+    // StampBadge doesn't forward a ref; aria-label lookup is exact and unique
+    // within the dialog at mount time.
+    const btn = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Close spotlight"]',
+    )
+    btn?.focus()
+  }, [])
 
   // Power readout: Character cards show their attack split; non-character
   // cards have a single set-power figure on the back of the card.
@@ -729,3 +778,36 @@ function rarityFullName(r: Rarity): string {
       return 'SPECIAL'
   }
 }
+
+// ---------------------------------------------------------------------------
+// GalleryCell — memo'd grid cell wrapping a bare CardView.
+// ---------------------------------------------------------------------------
+
+interface GalleryCellProps {
+  card: Card
+  onSelect: (card: Card) => void
+  registerRef: (id: string, el: HTMLButtonElement | null) => void
+}
+
+const GalleryCell = memo(function GalleryCell({
+  card,
+  onSelect,
+  registerRef,
+}: GalleryCellProps) {
+  const handleClick = useCallback(() => onSelect(card), [onSelect, card])
+  // Stable per-card ref callback so React only invokes it on mount/unmount,
+  // not on every render.
+  const handleRef = useCallback(
+    (el: HTMLButtonElement | null) => registerRef(card.id, el),
+    [registerRef, card.id],
+  )
+  return (
+    <CardView
+      ref={handleRef}
+      card={card}
+      bare
+      onClick={handleClick}
+      className="!w-full"
+    />
+  )
+})

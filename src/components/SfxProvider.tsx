@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { MotionConfig } from 'motion/react'
 import { getSoundManager, type SfxId } from '@/lib/sound'
 
 interface SfxContextValue {
@@ -78,7 +79,17 @@ export function SfxProvider({ children }: { children: ReactNode }) {
 
   return (
     <SfxContext.Provider value={{ play, unlocked, setMuted, muted }}>
-      {children}
+      {/*
+        MotionConfig with reducedMotion="user" makes every motion/react
+        animation in the tree honor the OS-level prefers-reduced-motion
+        signal: transitions still fire but at duration 0, so layout-driven
+        slides/scales settle instantly. SfxProvider is the existing app-wide
+        client wrapper (post-3.3), so this is the right boundary — wrapping
+        higher would require pulling another 'use client' island.
+        CSS-driven animations + the SMIL pulse in ChronosClock are guarded
+        separately (globals.css media query + useReducedMotion conditional).
+      */}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </SfxContext.Provider>
   )
 }

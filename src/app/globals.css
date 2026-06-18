@@ -164,3 +164,23 @@ body {
 .animate-fade-in { animation: fadeIn 300ms ease-out }
 .animate-slide-up { animation: slideUp 280ms cubic-bezier(0.22, 0.61, 0.36, 1) }
 .animate-shake { animation: shakeHit 350ms ease-out }
+
+/* prefers-reduced-motion — neutralize the CSS animations + smooth-scroll +
+   any transition the framework hasn't already been handed via MotionConfig.
+   The chronos medal SMIL pulse is guarded separately in ChronosClock.tsx
+   (SMIL is immune to CSS media queries and must be removed from the DOM). */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-shake {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

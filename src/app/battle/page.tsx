@@ -88,6 +88,12 @@ function BattleSession({ onReplay }: { onReplay: () => void }) {
   const [battleResult, setBattleResult] = useState<BattleAnimationResult | null>(null)
   const [showAnim, setShowAnim] = useState(false)
   const [showQuit, setShowQuit] = useState(false)
+  // Assertive live-region text for screen-reader battle announcements. Lives
+  // here (not inside BattleAnimationOverlay) because aria-live only fires on
+  // text changes within a node that was already in the AT tree at mount —
+  // BattleAnimationOverlay mounts WITH its content so its own aria-live never
+  // announces. This region stays mounted always and updates on result compute.
+  const [battleAnnouncement, setBattleAnnouncement] = useState('')
 
   // Guard against accidental tab close / refresh during an active match —
   // a 20-minute hot-seat game otherwise disappears with one mistaken swipe.
@@ -167,6 +173,14 @@ function BattleSession({ onReplay }: { onReplay: () => void }) {
         damage: result.damage,
         loser: result.loser,
       })
+      // Compose the SR-only announcement now so the assertive live region
+      // fires the moment the result is known. The overlay's own visuals
+      // remain aria-hidden — see BattleAnimationOverlay.tsx for the rationale.
+      setBattleAnnouncement(
+        result.loser !== null
+          ? `Battle resolved. Player 1 attack ${result.player0Attack}, Player 2 attack ${result.player1Attack}. Player ${result.loser + 1} takes ${result.damage} damage.`
+          : `Battle resolved. Player 1 attack ${result.player0Attack}, Player 2 attack ${result.player1Attack}. Draw, no damage dealt.`,
+      )
       setShowAnim(true)
       // advance is deferred until BattleAnimationOverlay fires onComplete.
       return
@@ -314,6 +328,19 @@ function BattleSession({ onReplay }: { onReplay: () => void }) {
   return (
     <>
       {body}
+
+      {/* Permanent SR-only live region for battle resolution announcements.
+          Mounted on every BattleSession render, so updating its text on result
+          compute reliably fires the AT assertive cue (a region mounted WITH
+          its content does not). */}
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        {battleAnnouncement}
+      </div>
 
       {/* Pass cover — only relevant when transitioning between P1 and P2 sub-screens. */}
       <CardBackCover

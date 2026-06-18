@@ -1,5 +1,6 @@
 'use client'
 
+import { forwardRef, memo } from 'react'
 import Image from 'next/image'
 import type { Card } from '@/types/game'
 import { ATTRIBUTE_COLORS, ATTRIBUTE_EN, RARITY_COLORS } from '@/lib/theme'
@@ -19,6 +20,11 @@ export interface CardViewProps {
    *  「キャラクターのパワーコストが足りていない場合、キャラクターの最終的な攻撃力は０となります」.
    *  Parent must compute `card.cost > calculateTotalPower(player)`. */
   costGated?: boolean
+  /** When true, suppresses every overlay (attribute kanji, rarity stamp, power
+   *  badge, caption strip) — only the bordered artwork window renders. Used
+   *  by the 422-cell gallery grid where the spotlight is the source of truth
+   *  for metadata, so the chrome would be illegible noise at ~117 px wide. */
+  bare?: boolean
   onClick?: () => void
   className?: string
 }
@@ -35,16 +41,20 @@ export interface CardViewProps {
  * utility terminates the body's blend modes so the paper grain does not bleed
  * into the artwork.
  */
-export default function CardView({
-  card,
-  faceDown = false,
-  selected = false,
-  compact = false,
-  chronosPosition,
-  costGated = false,
-  onClick,
-  className = '',
-}: CardViewProps) {
+function CardViewImpl(
+  {
+    card,
+    faceDown = false,
+    selected = false,
+    compact = false,
+    chronosPosition,
+    costGated = false,
+    bare = false,
+    onClick,
+    className = '',
+  }: CardViewProps,
+  ref: React.Ref<HTMLButtonElement>,
+) {
   const interactive = typeof onClick === 'function'
 
   // Power overlay derivation — only meaningful for Character cards in a
@@ -103,9 +113,8 @@ export default function CardView({
         )}
 
         {/* Top-left attribute tag — 24x24 colored square w/ attribute kanji.
-            Suppressed for face-down and compact (compact relies on the
-            artwork alone for identity). */}
-        {!faceDown && !compact && (
+            Suppressed for face-down, compact, and bare (bare = just artwork). */}
+        {!faceDown && !compact && !bare && (
           <div
             className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center font-display text-[11px] leading-none text-white shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
             style={{ backgroundColor: attrColor }}
@@ -117,8 +126,8 @@ export default function CardView({
         )}
 
         {/* Top-right: selected check takes precedence over rarity stamp.
-            We never render both at the same anchor. */}
-        {!faceDown && !compact && (
+            We never render both at the same anchor. Bare skips this too. */}
+        {!faceDown && !compact && !bare && (
           <div className="absolute right-2 top-2">
             {selected ? (
               <StampBadge size="xs" variant="fill-accent" ariaLabel="Selected">
@@ -143,7 +152,7 @@ export default function CardView({
             attack to 0 (cost > player power); the stamp renders neutral
             gray with `0` so the visible number matches what calculateBattle
             will actually use. */}
-        {showPowerOverlay && (
+        {showPowerOverlay && !bare && (
           <div
             className={`absolute bottom-2 left-1/2 -translate-x-1/2 border-2 border-ink px-3 py-1 font-numeric text-[24px] font-bold leading-none text-white ${
               costGated
@@ -164,8 +173,8 @@ export default function CardView({
       </div>
 
       {/* Bottom caption strip — title flanked by a tiny rarity color chip.
-          Suppressed in compact and face-down modes. */}
-      {!faceDown && !compact && (
+          Suppressed in compact, face-down, and bare modes. */}
+      {!faceDown && !compact && !bare && (
         <div className="flex items-center gap-2 border-t border-ink bg-card-bg px-2 py-1.5">
           <span className="line-clamp-2 flex-1 font-display text-[11px] leading-tight text-ink">
             {card.title}
@@ -191,10 +200,13 @@ export default function CardView({
     .join(' ')
 
   // Interactive variant — semantic <button> so the card is keyboard-focusable
-  // and announced by AT. stamp-reset strips browser button chrome.
+  // and announced by AT. stamp-reset strips browser button chrome. Ref-forwarded
+  // so parents (e.g. the gallery's focus-restoration on spotlight close) can
+  // address the underlying button without going through the DOM.
   if (interactive) {
     return (
       <button
+        ref={ref}
         type="button"
         onClick={onClick}
         className={`stamp-reset ${containerClass}`}
@@ -224,6 +236,13 @@ export default function CardView({
     </div>
   )
 }
+
+// memo + forwardRef so the 422-cell gallery grid skips re-rendering cells whose
+// `card` reference is unchanged, and parents can ref the underlying button.
+const CardView = memo(forwardRef<HTMLButtonElement, CardViewProps>(CardViewImpl))
+CardView.displayName = 'CardView'
+
+export default CardView
 
 /**
  * CardMini — convenience wrapper around CardView in compact mode.
