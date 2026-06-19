@@ -6,13 +6,15 @@ Synthesized 2026-06-10 from six independent review reports: official-rules accur
 
 - **Wave 1** (correctness blockers, 9 items) — ✓ SHIPPED.
 - **Wave 2** (core experience, 13 items) — ✓ SHIPPED.
-- **Wave 3** (ship-it polish, 8 items) — ✓ SHIPPED.
+- **Wave 3** (ship-it polish, 8 items) — ✓ SHIPPED, with one nuance:
+  - 3.4 — shipped via the documented "no icons array + custom `src/app/icon.svg`" fallback; PWA install-prompt PNGs (192 / 512) are not authored.
+  - 3.5 — code-side scaffolding fully shipped; only `public/og.png` (the social-card graphic asset) remains. Twitter card is `summary` rather than `summary_large_image` as a result.
 - **Wave 3.5** (QA-discovered regressions, 2 items) — ✓ SHIPPED (Session 1, 2026-06-18). See "Wave 3.5" section below.
 - **Wave 4** (depth & hygiene, 10 items) — ✓ SHIPPED across three sessions:
   - Session 1 (2026-06-18): 4.5, 4.6, 4.7, 4.8, 4.9, 4.10.
   - Session 2 (2026-06-18): 4.4 (thumbnails), 4.2 (vitest), 4.3 (Playwright + CI).
   - Session 3 (2026-06-19): 4.1 (card-effect engine — pattern parser, priority ordering, cost gate, HP-0 short-circuit, night-side announcement, gallery LIVE/NOT LIVE tag).
-- **All four waves complete.** The IMPROVEMENTS.md backlog is now closed; further work tracks via TESTING_PROMPT.md QA passes.
+- **All code-side work complete.** The only outstanding backlog item is the `public/og.png` graphic asset (3.5) — a design task, not code. The deployed build at https://dr-manda.github.io/zutomayo-card-game/ is fully functional.
 
 ## How to use this file
 
@@ -242,13 +244,13 @@ Verified: every exported page's `<body>` is empty except `<template data-dgst="B
 
 ### 3.4 Create PWA manifest icons and replace the stock Next favicon
 
-**Size:** M · **Files:** `public/manifest.json:10-21`, `src/app/favicon.ico`, new `public/manifest-icon-192.png`, `public/manifest-icon-512.png`
+**Size:** M · **Status:** ✓ SHIPPED via documented fallback — `public/manifest.json` ships with NO icons array (no 404s, exactly the fallback called out below), and `src/app/icon.svg` is a 1.1 KB checked-in custom riso-style ず mark that Next.js auto-rasterizes into favicon.ico + apple-touch-icon.png at build time. Custom branding is in place; no PWA install-prompt icons until someone authors the 192/512 PNGs. · **Files:** `public/manifest.json:10-21`, `src/app/favicon.ico`, new `public/manifest-icon-192.png`, `public/manifest-icon-512.png`
 
 `manifest.json` declares two icon files that do not exist in `public/` (404 → invalid manifest, no install prompt, console errors), and `src/app/favicon.ico` is byte-identical to the create-next-app default — the tab shows the Next.js triangle. Fix: author one 512×512 riso-style mark as SVG (paper `#f1ece2` square, hard ink border, the character 「ず」 in the display font with the signature pink `#F15060` / teal `#00AEEF` misregistration offset matching the `.ink-offset` idiom), rasterize with sharp via a one-off Node script into the two PNGs (names must match manifest.json exactly), and replace favicon.ico with a 32px render (or drop `icon.png` into `src/app/`). Check the SVG source into the repo. Fallback if icon work is deferred: delete the icons array from manifest.json — do not ship 404ing entries.
 
 ### 3.5 OG/Twitter metadata with metadataBase, og.png, and per-route titles
 
-**Size:** M · **Files:** `src/app/layout.tsx:39-44`, new `public/og.png`, new `src/app/{battle,gallery,rules,credits}/layout.tsx` · **Depends on:** 3.2
+**Size:** M · **Status:** ▣ PARTIAL — metadataBase, openGraph (title + description + locale + type), twitter (summary card + title + description), and per-route layouts (`src/app/{battle,gallery,rules,credits}/layout.tsx` each exporting its own `metadata.title`) are all in place and live on the deployed build. The single remaining gap is `public/og.png` (the 1200×630 social-card preview image) and the `openGraph.images` / `twitter.images` arrays that would reference it — both intentionally left empty so cards render as bare text rather than 404 placeholders. Ship the image asset to flip Twitter card from `summary` to `summary_large_image`; the code-side scaffolding is ready. · **Files:** `src/app/layout.tsx:39-44`, new `public/og.png`, new `src/app/{battle,gallery,rules,credits}/layout.tsx` · **Depends on:** 3.2
 
 Built HTML contains zero `og:*`/`twitter:*` tags — shared links render as bare text on Discord/Twitter/LINE, exactly where a ZUTOMAYO fan project gets shared. Every route also shows the identical tab title (all pages are `'use client'` and cannot export metadata). Fix: (1) create `public/og.png` (1200×630, riso style, giant ずとまよ display type, pink halftone band, the fanmade disclaimer small at bottom — same SVG→sharp pipeline as 3.4); (2) in layout metadata add `metadataBase: new URL('https://<github-username>.github.io/zutomayo-card-game')` (**fill in the real username**; metadataBase DOES handle prefixing, unlike the manifest field), `openGraph: { ..., images: ['/og.png'], locale: 'ja_JP' }`, `twitter: { card: 'summary_large_image', images: ['/og.png'] }`, and change `title` to `{ default: 'ZUTOMAYO CARD — THE BATTLE BEGINS', template: '%s — ZUTOMAYO CARD' }`; (3) add thin server layout files per route exporting only `metadata = { title: 'GALLERY' | 'BATTLE' | 'RULES' }` and returning children.
 

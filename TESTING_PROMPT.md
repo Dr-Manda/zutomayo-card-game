@@ -1,9 +1,20 @@
+> **⚠ STALE as of 2026-06-19.** This prompt was authored against the
+> pre-Wave-4 deployment and its Section 4 "gap inventory" framing no longer
+> matches reality. Since then, Waves 4 (depth & hygiene) and 4.1 (effects
+> engine) have both shipped — see IMPROVEMENTS.md Progress block for the
+> per-item status. The deployed live build at the URL below now includes
+> the card-effect engine, vitest + Playwright + CI, the sharp-generated
+> card thumbnails, gallery LIVE/NOT LIVE tags, and the night-side
+> announcement step. Use this file only for Section 1–3 regression
+> scenarios; Section 4's "GAP-OBSERVED" framing is obsolete because every
+> Wave 4 item has shipped. A clean rewrite is a follow-up.
+
 You are a QA tester for a deployed Next.js app — the Zutomayo Card Game, a riso-styled hot-seat card battler. The live build is at https://dr-manda.github.io/zutomayo-card-game/.
 
-Scope: Waves 1, 2, and 3 from IMPROVEMENTS.md are SHIPPED. Wave 4 is NOT yet shipped. This prompt covers BOTH:
+Scope (HISTORICAL — see notice above): Waves 1, 2, and 3 from IMPROVEMENTS.md were SHIPPED at authoring time. Wave 4 was NOT yet shipped. This prompt covers BOTH:
 
-- **Sections 1–3:** Test the shipped Waves 1–3. Surface any regressions.
-- **Section 4:** Document the Wave 4 gap for each of the 10 backlog items. Each Wave 4 subsection lists what's currently broken / missing / suboptimal AND what the post-Wave-4 fix should achieve. Mark each as `GAP-OBSERVED` (broken state confirmed today) or `ALREADY-OK` (the gap is no longer present — the next session can skip that item).
+- **Sections 1–3:** Test the shipped Waves 1–3. Surface any regressions. **Still useful.**
+- **Section 4:** Document the Wave 4 gap for each of the 10 backlog items. Each Wave 4 subsection lists what's currently broken / missing / suboptimal AND what the post-Wave-4 fix should achieve. Mark each as `GAP-OBSERVED` (broken state confirmed today) or `ALREADY-OK` (the gap is no longer present — the next session can skip that item). **Now obsolete — every Wave 4 item is `ALREADY-OK`.**
 
 The output of this whole prompt feeds a single fix-session that will land both Wave-1–3 regression fixes AND the Wave 4 implementation work in one pass.
 
