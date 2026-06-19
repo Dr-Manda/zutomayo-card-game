@@ -36,6 +36,14 @@ export interface PlayerState {
   setZone: SetZone
   powerCharger: Card[]
   abyss: Card[]
+  /** Accumulated attack delta from this turn's effects (own +N buffs and
+   *  opponent -N debuffs, both terminating on the same player). Reset to 0
+   *  inside endTurn after the battle that consumed it. Wave 4.1. */
+  attackModifier?: number
+  /** Snapshot of the previous turn's Character in this player's battleZone,
+   *  populated inside endTurn so this turn's process_effects can evaluate
+   *  「前のターンで使用したキャラクターカードの属性が...」 conditions. Wave 4.1. */
+  previousTurnCharacter?: Card | null
 }
 
 export type TurnPhase =

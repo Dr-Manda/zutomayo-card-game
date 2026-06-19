@@ -52,6 +52,14 @@ test.describe('Battle hot-seat flow', () => {
     ).toBeVisible()
     await page.getByRole('button', { name: /START GAME/i }).click()
 
+    // ─── Night-side announcement (Wave 4.1) ───────────────────────────
+    // The night seat drives effect priority order; the assignment is now
+    // visible before mulligan instead of hidden inside the random pick.
+    await expect(
+      page.getByRole('button', { name: /BEGIN/i }),
+    ).toBeVisible()
+    await page.getByRole('button', { name: /BEGIN/i }).click()
+
     // ─── Mulligan P1 (skip — keep all 5 cards) ────────────────────────
     await expect(page.locator(DIALOG)).toBeVisible()
     await page.getByRole('button', { name: /Keep All/i }).click()

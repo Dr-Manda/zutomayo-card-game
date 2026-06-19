@@ -7,6 +7,7 @@ import type { Card, Rarity } from '@/types/game'
 import { getAllCards, getPackNames } from '@/lib/deckBuilder'
 import { ATTRIBUTE_EN } from '@/lib/theme'
 import { getLocalCardPath } from '@/lib/cardAssets'
+import { isEffectImplemented } from '@/lib/effects'
 import CardView from '@/components/CardView'
 import StampBadge from '@/components/StampBadge'
 
@@ -717,8 +718,28 @@ function Spotlight({ card, onClose, onPrev, onNext }: SpotlightProps) {
             }}
             className="mx-auto mt-6 max-w-md border-2 border-ink bg-paper-deep p-3 font-body text-sm text-ink"
           >
-            <div className="mb-1 font-mono text-[10px] uppercase tracking-widest text-ink-dim">
-              効果 / EFFECT
+            <div className="mb-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-widest text-ink-dim">
+              <span>効果 / EFFECT</span>
+              {/* Engine-support tag (Wave 4.1). Lets players see at a
+                  glance whether the effect text actually fires during a
+                  battle — the parser covers ~97 of 251 effect cards
+                  today; the rest are unimplemented but still legible. */}
+              <span
+                className={
+                  isEffectImplemented(card)
+                    ? 'text-night-deep'
+                    : 'text-ink-dim'
+                }
+                title={
+                  isEffectImplemented(card)
+                    ? 'Engine resolves this effect during battle.'
+                    : 'Effect text is shown but does not yet fire — pattern coverage will expand in later updates.'
+                }
+              >
+                {isEffectImplemented(card)
+                  ? '稼働 · LIVE'
+                  : '未実装 · NOT LIVE'}
+              </span>
             </div>
             {card.effect}
           </motion.div>

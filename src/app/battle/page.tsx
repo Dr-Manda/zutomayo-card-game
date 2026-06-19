@@ -6,6 +6,7 @@ import { useGame } from '@/hooks/useGame'
 import { calculateBattle, calculateTotalPower } from '@/lib/gameEngine'
 import CardBackCover from '@/components/CardBackCover'
 import PregameScreen from '@/components/battle/PregameScreen'
+import NightSideAnnouncement from '@/components/battle/NightSideAnnouncement'
 import MulliganScreen from '@/components/battle/MulliganScreen'
 import InitialPlacementScreen from '@/components/battle/InitialPlacementScreen'
 import RevealScreen from '@/components/battle/RevealScreen'
@@ -31,6 +32,7 @@ import BattleAnimationOverlay, {
  */
 type BattleSubScreen =
   | 'pregame'
+  | 'night_announcement'
   | 'mulligan_p1' | 'pass_to_p2_mulligan' | 'mulligan_p2' | 'pass_to_p1_initial'
   | 'initial_p1' | 'pass_to_p2_initial' | 'initial_p2'
   | 'reveal'
@@ -118,7 +120,10 @@ function BattleSession({ onReplay }: { onReplay: () => void }) {
   // ─── Transition handlers ───────────────────────────────────────────
   const handleStart = () => {
     startGame()
-    setSubScreen('mulligan_p1')
+    // Wave 4.1 — surface the night-side assignment before mulligan instead
+    // of letting it sit as hidden state from a coin flip. The night seat
+    // drives effect priority order, so this can't be invisible anymore.
+    setSubScreen('night_announcement')
   }
 
   const handleMulligan = (playerIndex: 0 | 1, indices: number[]) => {
@@ -256,6 +261,13 @@ function BattleSession({ onReplay }: { onReplay: () => void }) {
   // Critical for hidden-information: the previous P1 hand fan must not leak.
   if (passActive) {
     body = <main className="flex-1" aria-hidden="true" />
+  } else if (underlyingSubScreen === 'night_announcement') {
+    body = (
+      <NightSideAnnouncement
+        nightPlayerIndex={gameState.nightPlayerIndex}
+        onContinue={() => setSubScreen('mulligan_p1')}
+      />
+    )
   } else if (underlyingSubScreen === 'mulligan_p1' || underlyingSubScreen === 'mulligan_p2') {
     const pi: 0 | 1 = underlyingSubScreen === 'mulligan_p1' ? 0 : 1
     body = (

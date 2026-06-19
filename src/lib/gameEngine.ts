@@ -275,21 +275,38 @@ export function calculateBattle(state: GameState): BattleResult {
   const p0Power = calculateTotalPower(p0)
   const p1Power = calculateTotalPower(p1)
 
+  // Effect-derived attack modifier (Wave 4.1). process_effects writes the
+  // accumulated +N buffs (own card) and -N debuffs (opponent's card targeting
+  // this player) into attackModifier; calculateBattle reads it here. Default
+  // 0 keeps pre-4.1 behavior unchanged.
+  const p0Mod = p0.attackModifier ?? 0
+  const p1Mod = p1.attackModifier ?? 0
+
   let p0Attack = 0
   let p1Attack = 0
 
   if (p0.battleZone) {
     const hasPower = p0Power >= p0.battleZone.cost
-    p0Attack = hasPower
-      ? (timePhase === 'night' ? p0.battleZone.night_attack : p0.battleZone.noon_attack)
-      : 0
+    if (hasPower) {
+      const base =
+        timePhase === 'night'
+          ? p0.battleZone.night_attack
+          : p0.battleZone.noon_attack
+      // Clamp at 0 — a debuff larger than the base attack still can't go
+      // negative; "did not attack" is the floor.
+      p0Attack = Math.max(0, base + p0Mod)
+    }
   }
 
   if (p1.battleZone) {
     const hasPower = p1Power >= p1.battleZone.cost
-    p1Attack = hasPower
-      ? (timePhase === 'night' ? p1.battleZone.night_attack : p1.battleZone.noon_attack)
-      : 0
+    if (hasPower) {
+      const base =
+        timePhase === 'night'
+          ? p1.battleZone.night_attack
+          : p1.battleZone.noon_attack
+      p1Attack = Math.max(0, base + p1Mod)
+    }
   }
 
   const damage = Math.abs(p0Attack - p1Attack)
@@ -367,6 +384,16 @@ export function endTurn(state: GameState): GameState {
         player.setZone = { ...player.setZone, [slot]: null }
       }
     }
+
+    // Wave 4.1 — snapshot this turn's battleZone Character so next turn's
+    // process_effects can evaluate 「前のターンで使用したキャラクターカードの
+    // 属性が...」 conditions. We snapshot only Characters (non-Character
+    // battle-zone cards are conceptually never "the character used this
+    // turn"). Reset attackModifier — it was a single-turn effect.
+    if (player.battleZone && player.battleZone.class === 'Character') {
+      player.previousTurnCharacter = player.battleZone
+    }
+    player.attackModifier = 0
 
     // Rule: 「このターンに手札から出したカードの枚数分だけデッキからカードを引きます」 —
     // draw EXACTLY as many cards as this player put into play from hand this turn.

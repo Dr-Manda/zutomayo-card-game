@@ -15,6 +15,7 @@ import {
   endTurn,
   getCardsToSet,
 } from '@/lib/gameEngine'
+import { applyEffects } from '@/lib/effects'
 import { generateRandomDeck } from '@/lib/deckBuilder'
 
 export type GameScreen = 'menu' | 'mulligan' | 'initial_place' | 'playing' | 'game_over'
@@ -140,16 +141,24 @@ export function useGame(): UseGameReturn {
       case 'replace_area_enchant':
         state = replaceAreaEnchant(state, 0)
         state = replaceAreaEnchant(state, 1)
-        // Effects engine isn't live yet (Wave 4). Skip the dead `process_effects`
-        // tap and route straight to battle — the user-facing tap chain stays
-        // honest about what the game can actually do today.
-        state.currentPhase = 'battle'
+        // Wave 4.1 — process_effects is now live, so route through it. The
+        // dispatcher unconditionally takes this branch; the tap that follows
+        // resolves effects from the priority player's side first.
+        state.currentPhase = 'process_effects'
         break
 
       case 'process_effects':
-        // Reachable only as a defensive fallback once 4.1 lands. Until then
-        // replace_area_enchant skips straight to battle.
-        state.currentPhase = 'battle'
+        // Wave 4.1 — resolve effects on both players' cards in chronos
+        // priority order. applyEffects gates each card on its cost (rule:
+        // パワーコストが足りていない場合、効果は発動しません) and short
+        // -circuits the queue if any HP hits 0 (rule: どちらかのHPが０に
+        // なった瞬間にゲームは終了します). The state returned may already
+        // carry currentPhase='game_over'; the post-switch override below
+        // routes to GameOverScreen accordingly.
+        state = applyEffects(state)
+        if (state.currentPhase !== 'game_over') {
+          state.currentPhase = 'battle'
+        }
         break
 
       case 'battle': {

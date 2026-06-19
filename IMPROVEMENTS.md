@@ -2,16 +2,17 @@
 
 Synthesized 2026-06-10 from six independent review reports: official-rules accuracy, engine/state-machine correctness, UX + mobile usability, performance, GitHub Pages deploy readiness, and accessibility/polish. Duplicates have been merged; 40 items total.
 
-## Progress (last updated 2026-06-18)
+## Progress (last updated 2026-06-19)
 
 - **Wave 1** (correctness blockers, 9 items) — ✓ SHIPPED.
 - **Wave 2** (core experience, 13 items) — ✓ SHIPPED.
 - **Wave 3** (ship-it polish, 8 items) — ✓ SHIPPED.
 - **Wave 3.5** (QA-discovered regressions, 2 items) — ✓ SHIPPED (Session 1, 2026-06-18). See "Wave 3.5" section below.
-- **Wave 4** (depth & hygiene, 10 items) — IN PROGRESS across multiple sessions. Per-item status is on each subsection heading.
-  - Session 1 (2026-06-18): 4.5, 4.6, 4.7, 4.8, 4.9, 4.10 — ✓ shipped.
-  - Session 2 (2026-06-18): 4.4 (thumbnails), 4.2 (vitest), 4.3 (Playwright + CI) — ✓ shipped.
-  - 4.1 (card-effect engine) — DEFERRED to its own dedicated session (Session 3).
+- **Wave 4** (depth & hygiene, 10 items) — ✓ SHIPPED across three sessions:
+  - Session 1 (2026-06-18): 4.5, 4.6, 4.7, 4.8, 4.9, 4.10.
+  - Session 2 (2026-06-18): 4.4 (thumbnails), 4.2 (vitest), 4.3 (Playwright + CI).
+  - Session 3 (2026-06-19): 4.1 (card-effect engine — pattern parser, priority ordering, cost gate, HP-0 short-circuit, night-side announcement, gallery LIVE/NOT LIVE tag).
+- **All four waves complete.** The IMPROVEMENTS.md backlog is now closed; further work tracks via TESTING_PROMPT.md QA passes.
 
 ## How to use this file
 
@@ -297,7 +298,11 @@ The card-effect engine, tests, CI, performance, and deep accessibility.
 
 ### 4.1 Card-effect engine: pattern-based interpreter with official priority-player ordering
 
-**Size:** L · **Status:** ▣ DEFERRED to its own dedicated session (Session 3). The other 4.x items ship first so this lands on a clean baseline. · **Files:** new `src/lib/effects.ts`, `src/hooks/useGame.ts:116-119` (the no-op `process_effects` case), `src/lib/gameEngine.ts` (calculateBattle, chronos), `src/data/cards.json`, `src/components/battle/PregameScreen.tsx`, `src/hooks/useGame.ts:41-50`
+**Size:** L · **Status:** ✓ SHIPPED (Session 3, 2026-06-19) — `src/lib/effects.ts` implements a pattern-matcher over Japanese effect text producing typed `{condition, action}` objects. Coverage at ship: **97 of 251 effect cards** parse to a live action (86 attack-buff, 9 hp-heal, 2 clock-set, plus support for attack-debuff and hp-damage when conditions are simple); the remaining 154 are tagged `unimplemented` and logged honestly during process_effects rather than silently swallowed. The parser handles every Wave-1-corpus condition: time (夜/昼/真夜中), self/opponent/previous-turn attribute (incl. compound `炎・風` / `炎か闇`), HP thresholds, opponent cost (★N or plain-digit notation), abyss-attribute count (incl. the 4-attribute spread), power-charger composition (`X属性だけだった` and `X属性のカードがある`), and boolean AND via `かつ、` / `で、` / `で、今が`. ASCII and 全角 digits are both accepted. Engine integration: `calculateBattle` reads a per-player `attackModifier` (clamped at 0 for over-debuff); `endTurn` resets the modifier and snapshots `battleZone` into `previousTurnCharacter` when it's a Character; `useGame.advancePhase` case `process_effects` now calls `applyEffects(state)` which fires priority-player-first based on `getTimePhase(chronosPosition)` matched against `nightPlayerIndex`, gates each card on `calculateTotalPower < card.cost` at the moment it processes, and short-circuits the entire queue when any HP hits 0 (rule: どちらかのHPが０になった瞬間にゲームは終了します). The `replace_area_enchant → process_effects` route is restored (un-skipping the dead tap from Wave 2.7). New `NightSideAnnouncement` screen surfaces the night-seat assignment as a visible step between pregame and mulligan, since the seat now drives effect priority and can't be hidden state. Gallery Spotlight shows a small `稼働 · LIVE` / `未実装 · NOT LIVE` tag on the effect box so players see at a glance which effects fire. 59 new vitest tests in `src/lib/__tests__/effects.test.ts` cover parser per category, evaluator per Condition kind, applyEffects (priority ordering, cost gate, HP-0 short-circuit, clock-set, debuff stacking onto opponent attackModifier), the endTurn modifier-reset + previous-turn snapshot, and a corpus-coverage check that runs the parser over all 422 cards in `src/data/cards.json` with documented coverage thresholds. **Total tests now: 102, all passing.** · **Files:** new `src/lib/effects.ts`, new `src/components/battle/NightSideAnnouncement.tsx`, new `src/lib/__tests__/effects.test.ts`, `src/types/game.ts` (added `attackModifier?: number` + `previousTurnCharacter?: Card | null` to PlayerState), `src/lib/gameEngine.ts` (calculateBattle reads modifier; endTurn resets + snapshots), `src/hooks/useGame.ts` (process_effects now calls applyEffects; replace_area_enchant routes through it), `src/app/battle/page.tsx` (new `night_announcement` sub-screen), `src/app/gallery/page.tsx` (Spotlight LIVE/NOT LIVE tag), `e2e/battle.spec.ts` (clicks BEGIN between START GAME and Keep All).
+
+The legacy backlog spec is preserved below as historical context.
+
+**Size:** L · **Status:** Originally **▣ DEFERRED to its own dedicated session (Session 3)**. · **Files:** new `src/lib/effects.ts`, `src/hooks/useGame.ts:116-119` (the no-op `process_effects` case), `src/lib/gameEngine.ts` (calculateBattle, chronos), `src/data/cards.json`, `src/components/battle/PregameScreen.tsx`, `src/hooks/useGame.ts:41-50`
 
 251 of 422 cards carry effect text but `process_effects` does nothing — ~60% of every card's identity is dead. Official turn step 6: 「キャラクター、エンチャント、エリアエンチャントに効果が記載されている場合、クロノス上のメダルがある側から効果を発動します。※各カードのパワーコストが足りていない場合、効果は発動しません」 — effects fire starting from the player on whose seat side (night/day) the Chronos medal currently sits; that priority player resolves all of their effects in any order first; power cost is evaluated **at the moment the effect is processed**; and 「どちらかのHPが０になった瞬間にゲームは終了します」 — HP-0 ends the game the instant it happens, so effect damage/heal must check the winner immediately, not only after battle.
 
